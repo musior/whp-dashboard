@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!doctype html>
 <html lang="en">
   <head>
@@ -126,3 +127,133 @@
 </div>
     <script src="script.js"></script>
 </html>
+=======
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Warehouse Productivity Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  </head>
+  <body>
+
+<!-- DROP SCREEN -->
+<div id="dropScreen">
+  <div class="drop-logo">
+    <div class="drop-logo-dot"></div>
+    <div class="drop-logo-text">Warehouse Productivity Dashboard</div>
+  </div>
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <div class="drop-title">Wczytaj plik z danymi</div>
+    <div class="drop-sub">Przeciągnij plik CSV pobrany z SharePointa<br>lub kliknij żeby wybrać z dysku</div>
+    <div class="drop-hint">PERFORMANCE_YYYYMM.csv</div>
+    <button class="drop-btn" id="browseBtn">Wybierz plik</button>
+    <input type="file" id="fileInput" accept=".csv,.txt">
+  </div>
+  <div class="drop-error" id="dropError"></div>
+</div>
+ 
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-dot"></div>
+      <div>
+        <h1>Warehouse Productivity</h1>
+        <div class="header-meta" id="headerMeta">Centrum Dystrybucyjne</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="nodata-tag" id="nodataTag">Brak danych dla tego dnia</div>
+      <div class="filter-tag" id="filterTag">
+        <span id="filterLabel"></span>
+        <button onclick="clearFilter()">×</button>
+      </div>
+      <div class="month-pill" id="monthLabel">—</div>
+      <button class="reload-btn" onclick="resetToDrop()">Wczytaj inny plik</button>
+    </div>
+  </div>
+ 
+  <div class="layout">
+    <div class="left-panel">
+      <div class="main-chart-area">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title" id="mainChartTitle">Produktywność per proces — cały miesiąc</div>
+            <div class="chart-subtitle" id="chartSubtitle">Wartości [%] · Cel: 85% · procesy</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div class="seg-switch">
+              <button class="seg-btn active" id="btnTME" onclick="setSegment('TME')">3ME</button>
+              <button class="seg-btn" id="btnSOL" onclick="setSegment('SOL')">SOL</button>
+            </div>
+            <div class="legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Powyżej celu</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Poniżej celu</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#4a5068"></div>Brak danych</div>
+              <div class="legend-item"><div class="legend-line"></div>Cel 85%</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="mainChart" role="img" aria-label="Wykres słupkowy produktywności per proces"></canvas>
+        </div>
+      </div>
+      <div class="bottom-left">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+          <div class="section-label" id="dayChartLabel">Dzienna produktywność magazynu</div>
+          <div style="font-size:11px;color:var(--text3)">Kliknij dzień → filtruj górny wykres</div>
+        </div>
+        <div class="bottom-left-chart-wrap">
+          <canvas id="dayChart" role="img" aria-label="Wykres dzienny produktywności TOTAL_PROD"></canvas>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="right-panel">
+      <div class="metrics-bar">
+        <div class="metric">
+          <div class="metric-label" id="prodMetricLabel">Produktywność 3ME</div>
+          <div class="metric-value neutral" id="avgMetric">—</div>
+          <div class="metric-delta" id="avgDelta">aktywne procesy</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Poniżej normy</div>
+          <div class="metric-value bad" id="belowMetric">—</div>
+          <div class="metric-delta">procesów &lt; 85%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Najlepszy proces</div>
+          <div class="metric-value neutral" id="bestMetric">—</div>
+          <div class="metric-delta" id="bestVal">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Dni z danymi</div>
+          <div class="metric-value neutral" id="daysMetric">—</div>
+          <div class="metric-delta" id="daysSub">dni roboczych</div>
+        </div>
+      </div>
+ 
+      <div class="table-area">
+        <div class="table-header-row">
+          <div class="section-label">Przyczyny niedociągnięć</div>
+          <div class="below-badge" id="belowBadge">— poniżej celu</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Work Center</th><th>Wynik</th></tr></thead>
+            <tbody id="reasonBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <script src="script.js"></script>
+</html>
+>>>>>>> 32cbfe3d728911e5ac383d538bd5bf01994e82e6
