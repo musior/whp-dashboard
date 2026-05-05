@@ -151,9 +151,7 @@ let reasonsData = [];
 
 async function fetchReasons() {
   try {
-    const res = await fetch(API_BASE, {
-      headers: { "X-API-Key": API_KEY },
-    });
+    const res = await fetch(`${API_BASE}?key=${API_KEY}&type=GET`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     reasonsData = Array.isArray(data) ? data : (data.results ?? data.data ?? []);
