@@ -519,6 +519,10 @@ tbody td:first-child {
   font-style: italic;
   font-size: 11px;
 }
+.reason-tag {
+  font-size: 11px;
+  color: var(--text2);
+}
 .empty-state {
   text-align: center;
   padding: 32px 0;

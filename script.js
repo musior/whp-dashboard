@@ -89,11 +89,91 @@ const MONTHS_GEN = [
   "grudnia",
 ];
 
+const API_KEY = "K3hT9sYrP2nV8bNq";
+const API_BASE = "/api/apps/performance/reasons/";
+
+const WORK_CENTERS = [
+  { id: 1, name: "Przyjęcie drobnicy" },
+  { id: 2, name: "Przyjęcie palet" },
+  { id: 3, name: "Cross-dock" },
+  { id: 4, name: "Rozładunek" },
+  { id: 5, name: "Sortowanie M3" },
+  { id: 6, name: "Załadunki" },
+  { id: 7, name: "Picking antresola" },
+  { id: 8, name: "Kontrola exportów" },
+  { id: 9, name: "Misje" },
+  { id: 10, name: "Foliowanie" },
+  { id: 11, name: "Picking regały" },
+  { id: 12, name: "Check & Pack" },
+  { id: 13, name: "VAS" },
+  { id: 14, name: "Labelling per hour" },
+];
+
+const REASON_CODES = [
+  { id: 1, name: "Conso dostaw" },
+  { id: 2, name: "Problemy sprzętowe" },
+  { id: 3, name: "Podwójne sortowanie w strefie 20K" },
+  { id: 4, name: "Rozbieżności w dostawach" },
+  { id: 5, name: "Error" },
+  { id: 6, name: "Sortowanie LOT/DW" },
+  { id: 7, name: "Dodatkowe czynności - celne" },
+  { id: 8, name: "Dodatkowe czynności - DD" },
+  { id: 9, name: "Nowy operator, kontrola reszty" },
+  { id: 10, name: "Błędnie załadowany towar" },
+  { id: 11, name: "Szkolenie nowego pracownika" },
+  { id: 12, name: "Wymogi klienta" },
+  { id: 13, name: "Zamówienia paczkowe" },
+  { id: 14, name: "Rozdrobnienie Pickingu" },
+  { id: 15, name: "Niewykwalifikowani pracownicy" },
+  { id: 16, name: "Zamówienia drobnicowe" },
+  { id: 17, name: "Zgrzewy - wysoki wolumen" },
+  { id: 18, name: "Instrukcje - wysoki wolumen" },
+  { id: 19, name: "Niski wolumen" },
+  { id: 20, name: "Opóźnienie w pickingu" },
+  { id: 21, name: "Problem ze specufikacjami/przewoźnikami" },
+  { id: 22, name: "Ograniczona ilość miejsca odstawczego" },
+];
+
+// PROC_LABEL uses "Check&Pack" but WORK_CENTERS has "Check & Pack" — normalize both
+const WC_NAME_TO_ID = Object.fromEntries(
+  WORK_CENTERS.map((wc) => [wc.name.replace(/\s/g, ""), wc.id])
+);
+const REASON_ID_TO_NAME = Object.fromEntries(
+  REASON_CODES.map((rc) => [rc.id, rc.name])
+);
+
 let appData = null;
 let mainChart = null,
   dayChart = null;
 let selectedDay = null;
 let activeSegment = "TME"; // 'TME' | 'SOL'
+let reasonsData = [];
+
+async function fetchReasons() {
+  try {
+    const res = await fetch(API_BASE, {
+      headers: { "X-API-Key": API_KEY },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    reasonsData = await res.json();
+  } catch (e) {
+    console.error("Błąd pobierania przyczyn:", e);
+    reasonsData = [];
+  }
+}
+
+function getReasonForRow(rawDate, wcName, segment) {
+  const wcId = WC_NAME_TO_ID[wcName.replace(/\s/g, "")];
+  if (wcId === undefined) return null;
+  const match = reasonsData.find(
+    (r) =>
+      r.date === rawDate &&
+      r.work_center === wcId &&
+      r.deleted_at === null &&
+      (segment === "TME" ? r.client === "3M" : r.client !== "3M")
+  );
+  return match ? REASON_ID_TO_NAME[match.reason_code] ?? null : null;
+}
 
 // ── Parser wartości (przecinek decimal, Infinity/0 → null) ──
 function pv(raw) {
@@ -711,7 +791,7 @@ function renderTable(day) {
       cols.forEach((col) => {
         const v = dv[col];
         if (v !== null && v !== undefined && v < TARGET)
-          rows.push({ date: fmtDate(dt), wc: PROC_LABEL[col], val: v });
+          rows.push({ date: fmtDate(dt), rawDate: dt, wc: PROC_LABEL[col], val: v });
       });
     });
   } else {
@@ -720,7 +800,7 @@ function renderTable(day) {
     cols.forEach((col) => {
       const v = dv[col];
       if (v !== null && v !== undefined && v < TARGET)
-        rows.push({ date: fmtDate(day), wc: PROC_LABEL[col], val: v });
+        rows.push({ date: fmtDate(day), rawDate: day, wc: PROC_LABEL[col], val: v });
     });
   }
 
@@ -733,15 +813,19 @@ function renderTable(day) {
   }
 
   tbody.innerHTML = rows
-    .map(
-      (r) => `
+    .map((r) => {
+      const reason = getReasonForRow(r.rawDate, r.wc, seg);
+      const reasonCell = reason
+        ? `<span class="reason-tag">${reason}</span>`
+        : `<span class="pending-tag">brak wpisu</span>`;
+      return `
     <tr>
       <td>${r.date}</td>
       <td><span class="wc-tag">${r.wc}</span> <span class="val-tag">${r.val.toFixed(1)}%</span></td>
-      <td><span class="pending-tag">oczekuje na dane z SharePointa</span></td>
+      <td>${reasonCell}</td>
     </tr>
-  `,
-    )
+  `;
+    })
     .join("");
 }
 
@@ -770,3 +854,5 @@ function setChartHeights() {
 }
 
 window.addEventListener("resize", setChartHeights);
+
+fetchReasons();
