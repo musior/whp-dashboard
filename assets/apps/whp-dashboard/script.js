@@ -136,10 +136,10 @@ const REASON_CODES = [
 
 // PROC_LABEL uses "Check&Pack" but WORK_CENTERS has "Check & Pack" — normalize both
 const WC_NAME_TO_ID = Object.fromEntries(
-  WORK_CENTERS.map((wc) => [wc.name.replace(/\s/g, ""), wc.id])
+  WORK_CENTERS.map((wc) => [wc.name.replace(/\s/g, ""), wc.id]),
 );
 const REASON_ID_TO_NAME = Object.fromEntries(
-  REASON_CODES.map((rc) => [rc.id, rc.name])
+  REASON_CODES.map((rc) => [rc.id, rc.name]),
 );
 
 let appData = null;
@@ -154,7 +154,9 @@ async function fetchReasons() {
     const res = await fetch(`${API_BASE}?key=${API_KEY}&type=GET`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    reasonsData = Array.isArray(data) ? data : (data.results ?? data.data ?? []);
+    reasonsData = Array.isArray(data)
+      ? data
+      : (data.results ?? data.data ?? []);
   } catch (e) {
     console.error("Błąd pobierania przyczyn:", e);
     reasonsData = [];
@@ -169,9 +171,9 @@ function getReasonForRow(rawDate, wcName, segment) {
       r.date === rawDate &&
       r.work_center === wcId &&
       r.deleted_at === null &&
-      (segment === "TME" ? r.client === "3M" : r.client !== "3M")
+      (segment === "TME" ? r.client === "3M" : r.client === "Solventum"),
   );
-  return match ? REASON_ID_TO_NAME[match.reason_code] ?? null : null;
+  return match ? (REASON_ID_TO_NAME[match.reason_code] ?? null) : null;
 }
 
 // ── Parser wartości (przecinek decimal, Infinity/0 → null) ──
@@ -790,7 +792,12 @@ function renderTable(day) {
       cols.forEach((col) => {
         const v = dv[col];
         if (v !== null && v !== undefined && v < TARGET)
-          rows.push({ date: fmtDate(dt), rawDate: dt, wc: PROC_LABEL[col], val: v });
+          rows.push({
+            date: fmtDate(dt),
+            rawDate: dt,
+            wc: PROC_LABEL[col],
+            val: v,
+          });
       });
     });
   } else {
@@ -799,7 +806,12 @@ function renderTable(day) {
     cols.forEach((col) => {
       const v = dv[col];
       if (v !== null && v !== undefined && v < TARGET)
-        rows.push({ date: fmtDate(day), rawDate: day, wc: PROC_LABEL[col], val: v });
+        rows.push({
+          date: fmtDate(day),
+          rawDate: day,
+          wc: PROC_LABEL[col],
+          val: v,
+        });
     });
   }
 
