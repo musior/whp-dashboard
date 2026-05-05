@@ -155,7 +155,8 @@ async function fetchReasons() {
       headers: { "X-API-Key": API_KEY },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    reasonsData = await res.json();
+    const data = await res.json();
+    reasonsData = Array.isArray(data) ? data : (data.results ?? data.data ?? []);
   } catch (e) {
     console.error("Błąd pobierania przyczyn:", e);
     reasonsData = [];
