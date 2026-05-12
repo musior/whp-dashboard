@@ -38,12 +38,12 @@ const PROC_LABEL = {
   TME_EXPORTS_PROD: "Kontrola exportów",
   TME_FOIL_PROD: "Foliowanie",
   TME_LOADING_PROD: "Załadunki",
-  TME_UNLOADING_PROD: "Rozładunki",
-  TME_FPALLETS_PROD: "Wstawianie palet",
-  TME_SORT_PROD: "Sortowanie",
-  TME_MEZZ_PROD: "Wstawianie drobnica",
-  TME_XDOCK_PROD: "XDOCK",
-  TME_CONTROL_PROD: "Check&Pack",
+  TME_UNLOADING_PROD: "Rozładunek",
+  TME_FPALLETS_PROD: "Przyjęcie palet",
+  TME_SORT_PROD: "Sortowanie M3",
+  TME_MEZZ_PROD: "Przyjęcie drobnicy",
+  TME_XDOCK_PROD: "Cross-dock",
+  TME_CONTROL_PROD: "Check & Pack",
   TME_VAS_PROD: "VAS",
   SOL_PICK_R_PROD: "Picking regały",
   SOL_PICK_A_PROD: "Picking antresola",
@@ -51,12 +51,12 @@ const PROC_LABEL = {
   SOL_EXPORTS_PROD: "Kontrola exportów",
   SOL_FOIL_PROD: "Foliowanie",
   SOL_LOADING_PROD: "Załadunki",
-  SOL_UNLOADING_PROD: "Rozładunki",
-  SOL_FPALLETS_PROD: "Wstawianie palet",
-  SOL_SORT_PROD: "Sortowanie",
-  SOL_MEZZ_PROD: "Wstawianie drobnica",
-  SOL_XDOCK_PROD: "XDOCK",
-  SOL_CONTROL_PROD: "Check&Pack",
+  SOL_UNLOADING_PROD: "Rozładunek",
+  SOL_FPALLETS_PROD: "Przyjęcie palet",
+  SOL_SORT_PROD: "Sortowanie M3",
+  SOL_MEZZ_PROD: "Przyjęcie drobnicy",
+  SOL_XDOCK_PROD: "Cross-dock",
+  SOL_CONTROL_PROD: "Check & Pack",
   SOL_VAS_PROD: "VAS",
 };
 
@@ -134,7 +134,6 @@ const REASON_CODES = [
   { id: 22, name: "Ograniczona ilość miejsca odstawczego" },
 ];
 
-// PROC_LABEL uses "Check&Pack" but WORK_CENTERS has "Check & Pack" — normalize both
 const WC_NAME_TO_ID = Object.fromEntries(
   WORK_CENTERS.map((wc) => [wc.name.replace(/\s/g, ""), wc.id]),
 );
