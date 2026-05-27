@@ -557,6 +557,41 @@ tbody td:first-child {
   color: var(--red);
 }
 
+/* SHIFT SWITCHER */
+.shift-switch {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  margin-left: 10px;
+}
+.shift-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  background: none;
+  color: var(--text3);
+  min-width: 80px;
+  text-align: center;
+}
+.shift-btn.active {
+  background: #7c5cbf;
+  color: #fff;
+}
+.shift-btn:not(.active):hover {
+  background: var(--border);
+  color: var(--text2);
+}
+
 /* SEGMENT SWITCHER */
 .seg-switch {
   display: flex;
