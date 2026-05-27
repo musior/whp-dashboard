@@ -60,6 +60,12 @@
             <div class="chart-subtitle" id="chartSubtitle">Wartości [%] · Cel: 85% · procesy</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px;">
+            <div class="shift-switch">
+              <button class="shift-btn active" id="btnShift0" onclick="setShift(null)">Total</button>
+              <button class="shift-btn" id="btnShift1" onclick="setShift(1)">Zmiana 1</button>
+              <button class="shift-btn" id="btnShift2" onclick="setShift(2)">Zmiana 2</button>
+              <button class="shift-btn" id="btnShift3" onclick="setShift(3)">Zmiana 3</button>
+            </div>
             <div class="seg-switch">
               <button class="seg-btn active" id="btnTME" onclick="setSegment('TME')">3ME</button>
               <button class="seg-btn" id="btnSOL" onclick="setSegment('SOL')">SOL</button>
