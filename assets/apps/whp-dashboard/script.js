@@ -146,6 +146,7 @@ let mainChart = null,
   dayChart = null;
 let selectedDay = null;
 let activeSegment = "TME"; // 'TME' | 'SOL'
+let activeShift = null; // null | 1 | 2 | 3
 let reasonsData = [];
 
 async function fetchReasons() {
@@ -214,7 +215,17 @@ function parseCSV(text) {
       );
       return o;
     })
-    .filter((r) => r.TYPE === "MONTH_TOTAL" || r.TYPE === "TOTAL");
+    .filter(
+      (r) =>
+        r.TYPE === "MONTH_TOTAL" ||
+        r.TYPE === "TOTAL" ||
+        r.TYPE === "TOTAL_SHIFT_1" ||
+        r.TYPE === "TOTAL_SHIFT_2" ||
+        r.TYPE === "TOTAL_SHIFT_3" ||
+        r.TYPE === "SHIFT_1" ||
+        r.TYPE === "SHIFT_2" ||
+        r.TYPE === "SHIFT_3",
+    );
 
   const monthRow = rows.find((r) => r.TYPE === "MONTH_TOTAL");
   const dailyRows = rows.filter((r) => r.TYPE === "TOTAL");
@@ -253,6 +264,47 @@ function parseCSV(text) {
     dailySolProd[date] = pv(r.SOL_PROD);
   });
 
+  // Shift data
+  const shiftMonthValues = {};
+  const shiftDailyValues = {};
+  const shiftDailyTmeProd = {};
+  const shiftDailySolProd = {};
+  const shiftTmeProdMonth = {};
+  const shiftSolProdMonth = {};
+
+  [1, 2, 3].forEach((s) => {
+    const smRow = rows.find((r) => r.TYPE === `TOTAL_SHIFT_${s}`);
+    shiftMonthValues[s] = { TME: {}, SOL: {} };
+    if (smRow) {
+      TME_COLS.forEach((c) => (shiftMonthValues[s].TME[c] = pv(smRow[c])));
+      SOL_COLS.forEach((c) => (shiftMonthValues[s].SOL[c] = pv(smRow[c])));
+      shiftTmeProdMonth[s] = pv(smRow["TME_PROD"]);
+      shiftSolProdMonth[s] = pv(smRow["SOL_PROD"]);
+    } else {
+      TME_COLS.forEach((c) => (shiftMonthValues[s].TME[c] = null));
+      SOL_COLS.forEach((c) => (shiftMonthValues[s].SOL[c] = null));
+      shiftTmeProdMonth[s] = null;
+      shiftSolProdMonth[s] = null;
+    }
+
+    shiftDailyValues[s] = { TME: {}, SOL: {} };
+    shiftDailyTmeProd[s] = {};
+    shiftDailySolProd[s] = {};
+    rows
+      .filter((r) => r.TYPE === `SHIFT_${s}`)
+      .forEach((r) => {
+        const m = r.DATE.match(/^(\d{4}-\d{2}-\d{2})$/);
+        if (!m) return;
+        const date = m[1];
+        shiftDailyValues[s].TME[date] = {};
+        shiftDailyValues[s].SOL[date] = {};
+        TME_COLS.forEach((c) => (shiftDailyValues[s].TME[date][c] = pv(r[c])));
+        SOL_COLS.forEach((c) => (shiftDailyValues[s].SOL[date][c] = pv(r[c])));
+        shiftDailyTmeProd[s][date] = pv(r["TME_PROD"]);
+        shiftDailySolProd[s][date] = pv(r["SOL_PROD"]);
+      });
+  });
+
   const activeDays = Object.keys(dailyValues.TME).sort();
 
   // Prekalkuluj maksima osi Y (górny wykres: max wartości procesów; dolny: max daily prod)
@@ -276,6 +328,26 @@ function parseCSV(text) {
     solDayMax[dt] = calcYMax(SOL_COLS.map((c) => dailyValues.SOL[dt][c]));
   });
 
+  const shiftYMax = {};
+  [1, 2, 3].forEach((s) => {
+    shiftYMax[s] = {
+      tmeMonth: calcYMax(TME_COLS.map((c) => shiftMonthValues[s].TME[c])),
+      solMonth: calcYMax(SOL_COLS.map((c) => shiftMonthValues[s].SOL[c])),
+      tmeDaily: calcYMax(activeDays.map((dt) => shiftDailyTmeProd[s][dt])),
+      solDaily: calcYMax(activeDays.map((dt) => shiftDailySolProd[s][dt])),
+      tmeDayProc: {},
+      solDayProc: {},
+    };
+    activeDays.forEach((dt) => {
+      shiftYMax[s].tmeDayProc[dt] = calcYMax(
+        TME_COLS.map((c) => shiftDailyValues[s].TME[dt]?.[c] ?? null),
+      );
+      shiftYMax[s].solDayProc[dt] = calcYMax(
+        SOL_COLS.map((c) => shiftDailyValues[s].SOL[dt]?.[c] ?? null),
+      );
+    });
+  });
+
   return {
     year,
     month,
@@ -288,6 +360,13 @@ function parseCSV(text) {
     dailyTmeProd,
     dailySolProd,
     activeDays,
+    shiftMonthValues,
+    shiftTmeProdMonth,
+    shiftSolProdMonth,
+    shiftDailyValues,
+    shiftDailyTmeProd,
+    shiftDailySolProd,
+    shiftYMax,
     yMax: {
       tmeMonth: tmeMonthMax,
       solMonth: solMonthMax,
@@ -394,14 +473,54 @@ function resetToDrop() {
   selectedDay = null;
 }
 
+// ── Pomocnicze gettery danych (total vs. zmiana) ──
+function getMonthValues(seg) {
+  if (activeShift === null) return appData.monthValues[seg];
+  return appData.shiftMonthValues[activeShift]?.[seg] ?? {};
+}
+function getDailyValues(seg, dt) {
+  if (activeShift === null) return appData.dailyValues[seg][dt] || {};
+  return appData.shiftDailyValues[activeShift]?.[seg]?.[dt] || {};
+}
+function getDailyProd(seg, dt) {
+  if (activeShift === null)
+    return seg === "TME" ? appData.dailyTmeProd[dt] : appData.dailySolProd[dt];
+  const map =
+    seg === "TME"
+      ? appData.shiftDailyTmeProd
+      : appData.shiftDailySolProd;
+  return map[activeShift]?.[dt] ?? null;
+}
+function getProdMonth(seg) {
+  if (activeShift === null)
+    return seg === "TME" ? appData.tmeProdMonth : appData.solProdMonth;
+  return seg === "TME"
+    ? (appData.shiftTmeProdMonth[activeShift] ?? null)
+    : (appData.shiftSolProdMonth[activeShift] ?? null);
+}
+function getYMax(key) {
+  if (activeShift === null) return appData.yMax[key];
+  return appData.shiftYMax[activeShift]?.[key] ?? 110;
+}
+function getYMaxDayProc(seg, dt) {
+  const key = seg === "TME" ? "tmeDayProc" : "solDayProc";
+  if (activeShift === null) return appData.yMax[key][dt] || 110;
+  return appData.shiftYMax[activeShift]?.[key]?.[dt] ?? 110;
+}
+
 // ── Init dashboard ──
 function initDashboard() {
   document.getElementById("dropScreen").classList.add("hidden");
   document.getElementById("dashboard").classList.add("visible");
   selectedDay = null;
   activeSegment = "TME";
+  activeShift = null;
   document.getElementById("btnTME").classList.add("active");
   document.getElementById("btnSOL").classList.remove("active");
+  document.getElementById("btnShift0").classList.add("active");
+  document.getElementById("btnShift1").classList.remove("active");
+  document.getElementById("btnShift2").classList.remove("active");
+  document.getElementById("btnShift3").classList.remove("active");
 
   document.getElementById("monthLabel").textContent = appData.monthLabel;
   document.getElementById("headerMeta").textContent =
@@ -410,12 +529,10 @@ function initDashboard() {
   const dayLabels = appData.activeDays.map((dt) => dt.slice(8));
   const seg = activeSegment;
   const cols = seg === "TME" ? TME_COLS : SOL_COLS;
-  const mVals = cols.map((c) => appData.monthValues[seg][c]);
-  const yMaxMain = appData.yMax[seg === "TME" ? "tmeMonth" : "solMonth"];
-  const dayProd = appData.activeDays.map((dt) =>
-    seg === "TME" ? appData.dailyTmeProd[dt] : appData.dailySolProd[dt],
-  );
-  const yMaxDay = appData.yMax[seg === "TME" ? "tmeDaily" : "solDaily"];
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
 
   // MAIN CHART
   const mc = document.getElementById("mainChart").getContext("2d");
@@ -604,12 +721,10 @@ function setSegment(seg) {
   document.getElementById("nodataTag").classList.remove("visible");
 
   const cols = seg === "TME" ? TME_COLS : SOL_COLS;
-  const mVals = cols.map((c) => appData.monthValues[seg][c]);
-  const yMaxMain = appData.yMax[seg === "TME" ? "tmeMonth" : "solMonth"];
-  const dayProd = appData.activeDays.map((dt) =>
-    seg === "TME" ? appData.dailyTmeProd[dt] : appData.dailySolProd[dt],
-  );
-  const yMaxDay = appData.yMax[seg === "TME" ? "tmeDaily" : "solDaily"];
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
 
   mainChart.data.labels = cols.map((c) => PROC_LABEL[c]);
   mainChart.data.datasets[0].data = mVals;
@@ -634,20 +749,66 @@ function setSegment(seg) {
   renderTable(null);
 }
 
+// ── Przełącznik zmiany ──
+function setShift(n) {
+  if (n === activeShift) return;
+  activeShift = n;
+  selectedDay = null;
+
+  document.getElementById("btnShift0").classList.toggle("active", n === null);
+  document.getElementById("btnShift1").classList.toggle("active", n === 1);
+  document.getElementById("btnShift2").classList.toggle("active", n === 2);
+  document.getElementById("btnShift3").classList.toggle("active", n === 3);
+  document.getElementById("filterTag").classList.remove("visible");
+  document.getElementById("nodataTag").classList.remove("visible");
+
+  const seg = activeSegment;
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
+
+  mainChart.data.datasets[0].data = mVals;
+  mainChart.data.datasets[0].backgroundColor = mVals.map((v) =>
+    bgColor(v, 0.75),
+  );
+  mainChart.data.datasets[0].borderColor = mVals.map((v) => bdColor(v));
+  mainChart.options.scales.y.max = yMaxMain;
+  mainChart.update();
+
+  dayChart.data.datasets[0].data = dayProd;
+  dayChart.data.datasets[0].backgroundColor = dayProd.map((v) =>
+    bgColor(v, 0.7),
+  );
+  dayChart.data.datasets[0].borderColor = dayProd.map((v) => bdColor(v));
+  dayChart.options.scales.y.max = yMaxDay;
+  dayChart.update();
+
+  updateLabels();
+  updateMetrics(null);
+  renderTable(null);
+}
+
 // ── Aktualizacja etykiet tekstowych ──
 function updateLabels() {
   const seg = activeSegment;
+  const shiftTag = activeShift !== null ? ` · Zmiana ${activeShift}` : "";
   const titleSuffix = selectedDay
     ? `— ${fmtDate(selectedDay)}`
     : "— cały miesiąc";
   document.getElementById("mainChartTitle").textContent =
     `Produktywność per proces ${titleSuffix}`;
   document.getElementById("chartSubtitle").textContent =
-    `Wartości [%] · Cel: 85% · procesy ${seg}`;
+    `Wartości [%] · Cel: 85% · procesy ${seg}${shiftTag}`;
   document.getElementById("dayChartLabel").textContent =
-    `Dzienna produktywność magazynu (${seg}_PROD)`;
+    activeShift !== null
+      ? `Dzienna produktywność — Zmiana ${activeShift} (${seg}_PROD)`
+      : `Dzienna produktywność magazynu (${seg}_PROD)`;
   document.getElementById("prodMetricLabel").textContent =
-    `Produktywność ${seg}`;
+    activeShift !== null
+      ? `Produktywność ${seg} · Zmiana ${activeShift}`
+      : `Produktywność ${seg}`;
 }
 
 // ── Filtrowanie dnia ──
@@ -655,12 +816,9 @@ function selectDay(date) {
   selectedDay = date;
   const seg = activeSegment;
   const cols = seg === "TME" ? TME_COLS : SOL_COLS;
-  const vals = cols.map(
-    (c) => (appData.dailyValues[seg][date] || {})[c] || null,
-  );
+  const vals = cols.map((c) => getDailyValues(seg, date)[c] ?? null);
   const hasAny = vals.some((v) => v !== null);
-  const yMaxProc =
-    appData.yMax[seg === "TME" ? "tmeDayProc" : "solDayProc"][date] || 110;
+  const yMaxProc = getYMaxDayProc(seg, date);
 
   mainChart.data.datasets[0].data = vals;
   mainChart.data.datasets[0].backgroundColor = vals.map((v) =>
@@ -671,9 +829,7 @@ function selectDay(date) {
   mainChart.update();
 
   const selIdx = appData.activeDays.indexOf(date);
-  const dayProd = appData.activeDays.map((dt) =>
-    seg === "TME" ? appData.dailyTmeProd[dt] : appData.dailySolProd[dt],
-  );
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
   dayChart.data.datasets[0].backgroundColor = appData.activeDays.map((dt, i) =>
     i === selIdx ? "#4f8ef7" : bgColor(dayProd[i], 0.18),
   );
@@ -694,12 +850,10 @@ function clearFilter() {
   selectedDay = null;
   const seg = activeSegment;
   const cols = seg === "TME" ? TME_COLS : SOL_COLS;
-  const mVals = cols.map((c) => appData.monthValues[seg][c]);
-  const yMaxMain = appData.yMax[seg === "TME" ? "tmeMonth" : "solMonth"];
-  const dayProd = appData.activeDays.map((dt) =>
-    seg === "TME" ? appData.dailyTmeProd[dt] : appData.dailySolProd[dt],
-  );
-  const yMaxDay = appData.yMax[seg === "TME" ? "tmeDaily" : "solDaily"];
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
 
   mainChart.data.datasets[0].data = mVals;
   mainChart.data.datasets[0].backgroundColor = mVals.map((v) =>
@@ -728,22 +882,15 @@ function updateMetrics(day) {
   const seg = activeSegment;
   const cols = seg === "TME" ? TME_COLS : SOL_COLS;
   let vals;
-  if (day === null) vals = cols.map((c) => appData.monthValues[seg][c]);
-  else vals = cols.map((c) => (appData.dailyValues[seg][day] || {})[c] || null);
+  if (day === null) vals = cols.map((c) => getMonthValues(seg)[c]);
+  else vals = cols.map((c) => getDailyValues(seg, day)[c] ?? null);
 
   const active = vals.filter((v) => v !== null);
   const below = active.filter((v) => v < TARGET).length;
   const best = active.length ? Math.max(...active) : null;
   const bestIdx = best !== null ? vals.indexOf(best) : -1;
 
-  const prod =
-    day === null
-      ? seg === "TME"
-        ? appData.tmeProdMonth
-        : appData.solProdMonth
-      : (seg === "TME"
-          ? appData.dailyTmeProd[day]
-          : appData.dailySolProd[day]) || null;
+  const prod = day === null ? getProdMonth(seg) : getDailyProd(seg, day);
 
   document.getElementById("avgMetric").textContent =
     prod != null ? prod.toFixed(1) + "%" : "—";
@@ -752,6 +899,8 @@ function updateMetrics(day) {
     (prod == null ? "neutral" : prod >= TARGET ? "good" : "bad");
   document.getElementById("avgDelta").textContent = day
     ? fmtDate(day)
+    : activeShift !== null
+    ? `Zmiana ${activeShift} · ${seg}_PROD`
     : `${seg}_PROD (miesiąc)`;
   document.getElementById("belowMetric").textContent = active.length
     ? below
@@ -763,10 +912,7 @@ function updateMetrics(day) {
 
   if (day === null) {
     const dwd = appData.activeDays.filter(
-      (dt) =>
-        (seg === "TME"
-          ? appData.dailyTmeProd[dt]
-          : appData.dailySolProd[dt]) !== null,
+      (dt) => getDailyProd(seg, dt) !== null,
     ).length;
     document.getElementById("daysMetric").textContent = dwd;
     document.getElementById("daysSub").textContent =
@@ -785,9 +931,9 @@ function renderTable(day) {
   let rows = [];
 
   if (day === null) {
-    // Wszystkie dni — szukamy w dailyValues
+    // Wszystkie dni
     appData.activeDays.forEach((dt) => {
-      const dv = appData.dailyValues[seg][dt] || {};
+      const dv = getDailyValues(seg, dt);
       cols.forEach((col) => {
         const v = dv[col];
         if (v !== null && v !== undefined && v < TARGET)
@@ -801,7 +947,7 @@ function renderTable(day) {
     });
   } else {
     // Konkretny dzień
-    const dv = appData.dailyValues[seg][day] || {};
+    const dv = getDailyValues(seg, day);
     cols.forEach((col) => {
       const v = dv[col];
       if (v !== null && v !== undefined && v < TARGET)
