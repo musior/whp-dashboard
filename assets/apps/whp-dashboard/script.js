@@ -1,34 +1,35 @@
 const TARGET = 85;
 
 const TME_COLS = [
+  "TME_UNLOADING_PROD",
+  "TME_SORT_PROD",
+  "TME_XDOCK_PROD",
+  "TME_FPALLETS_PROD",
+  "TME_MEZZ_PROD",
   "TME_PICK_R_PROD",
   "TME_PICK_A_PROD",
   "TME_MISSIONS_PROD",
   "TME_EXPORTS_PROD",
+  "TME_VAS_PROD",
+  "TME_CONTROL_PROD",
   "TME_FOIL_PROD",
   "TME_LOADING_PROD",
-  "TME_UNLOADING_PROD",
-  "TME_FPALLETS_PROD",
-  "TME_SORT_PROD",
-  "TME_MEZZ_PROD",
-  "TME_XDOCK_PROD",
-  "TME_CONTROL_PROD",
-  "TME_VAS_PROD",
 ];
+
 const SOL_COLS = [
+  "SOL_UNLOADING_PROD",
+  "SOL_SORT_PROD",
+  "SOL_XDOCK_PROD",
+  "SOL_FPALLETS_PROD",
+  "SOL_MEZZ_PROD",
   "SOL_PICK_R_PROD",
   "SOL_PICK_A_PROD",
   "SOL_MISSIONS_PROD",
   "SOL_EXPORTS_PROD",
+  "SOL_VAS_PROD",
+  "SOL_CONTROL_PROD",
   "SOL_FOIL_PROD",
   "SOL_LOADING_PROD",
-  "SOL_UNLOADING_PROD",
-  "SOL_FPALLETS_PROD",
-  "SOL_SORT_PROD",
-  "SOL_MEZZ_PROD",
-  "SOL_XDOCK_PROD",
-  "SOL_CONTROL_PROD",
-  "SOL_VAS_PROD",
 ];
 
 const PROC_LABEL = {
@@ -486,9 +487,7 @@ function getDailyProd(seg, dt) {
   if (activeShift === null)
     return seg === "TME" ? appData.dailyTmeProd[dt] : appData.dailySolProd[dt];
   const map =
-    seg === "TME"
-      ? appData.shiftDailyTmeProd
-      : appData.shiftDailySolProd;
+    seg === "TME" ? appData.shiftDailyTmeProd : appData.shiftDailySolProd;
   return map[activeShift]?.[dt] ?? null;
 }
 function getProdMonth(seg) {
@@ -900,8 +899,8 @@ function updateMetrics(day) {
   document.getElementById("avgDelta").textContent = day
     ? fmtDate(day)
     : activeShift !== null
-    ? `Zmiana ${activeShift} · ${seg}_PROD`
-    : `${seg}_PROD (miesiąc)`;
+      ? `Zmiana ${activeShift} · ${seg}_PROD`
+      : `${seg}_PROD (miesiąc)`;
   document.getElementById("belowMetric").textContent = active.length
     ? below
     : "—";
