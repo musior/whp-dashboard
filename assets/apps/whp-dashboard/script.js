@@ -167,14 +167,20 @@ async function fetchReasons() {
 function getReasonForRow(rawDate, wcName, segment) {
   const wcId = WC_NAME_TO_ID[wcName.replace(/\s/g, "")];
   if (wcId === undefined) return null;
+  const expectedShift = activeShift === null ? null : `Zmiana ${activeShift}`;
   const match = reasonsData.find(
     (r) =>
       r.date === rawDate &&
       r.work_center === wcId &&
       r.deleted_at === null &&
-      (segment === "TME" ? r.client === "3M" : r.client === "Solventum"),
+      (segment === "TME" ? r.client === "3M" : r.client === "Solventum") &&
+      (expectedShift === null
+        ? !r.shift || r.shift === "Total"
+        : r.shift === expectedShift),
   );
-  return match ? (REASON_ID_TO_NAME[match.reason_code] ?? null) : null;
+  return match
+    ? { reason: REASON_ID_TO_NAME[match.reason_code] ?? null, shift: match.shift || "Total" }
+    : null;
 }
 
 // ── Parser wartości (przecinek decimal, Infinity/0 → null) ──
@@ -963,20 +969,24 @@ function renderTable(day) {
     rows.length + " poniżej celu";
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state"><div class="empty-icon">✓</div>Brak procesów poniżej normy</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">✓</div>Brak procesów poniżej normy</div></td></tr>`;
     return;
   }
 
   tbody.innerHTML = rows
     .map((r) => {
-      const reason = getReasonForRow(r.rawDate, r.wc, seg);
-      const reasonCell = reason
-        ? `<span class="reason-tag">${reason}</span>`
+      const data = getReasonForRow(r.rawDate, r.wc, seg);
+      const reasonCell = data?.reason
+        ? `<span class="reason-tag">${data.reason}</span>`
         : `<span class="pending-tag">brak wpisu</span>`;
+      const shiftCell = data
+        ? `<span class="shift-tag">${data.shift}</span>`
+        : `<span class="pending-tag">—</span>`;
       return `
     <tr>
       <td>${r.date}</td>
       <td><span class="wc-tag">${r.wc}</span> <span class="val-tag">${r.val.toFixed(1)}%</span></td>
+      <td>${shiftCell}</td>
       <td>${reasonCell}</td>
     </tr>
   `;
