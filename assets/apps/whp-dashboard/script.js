@@ -91,7 +91,9 @@ const MONTHS_GEN = [
 ];
 
 const API_KEY = "K3hT9sYrP2nV8bNq";
-const API_BASE = "/api/apps/performance/reasons/";
+const API_BASE = "https://cloud.fiege.pl/api/apps/performance/reasons/";
+const REPORT_API_BASE =
+  "https://cloud.fiege.pl/api/datalake/performance/report/";
 
 const WORK_CENTERS = [
   { id: 1, name: "Przyjęcie drobnicy" },
@@ -150,6 +152,14 @@ let activeSegment = "TME"; // 'TME' | 'SOL'
 let activeShift = null; // null | 1 | 2 | 3
 let reasonsData = [];
 
+// ── Wybór miesiąca (?month=YYYY-MM) ──
+function currentMonthParam() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+let selectedMonth = currentMonthParam();
+let lastGoodMonth = selectedMonth;
+
 async function fetchReasons() {
   try {
     const res = await fetch(`${API_BASE}?key=${API_KEY}&type=GET`);
@@ -163,6 +173,45 @@ async function fetchReasons() {
     reasonsData = [];
   }
 }
+
+async function fetchReportData() {
+  monthPill.classList.add("loading");
+  monthPill.classList.remove("error");
+  try {
+    const res = await fetch(`${REPORT_API_BASE}?month=${selectedMonth}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const csvText = json.data?.data;
+    if (!csvText || typeof csvText !== "string") {
+      throw new Error("Brak danych w odpowiedzi API.");
+    }
+    appData = parseCSV(csvText);
+    lastGoodMonth = selectedMonth;
+    apiLoading.classList.add("hidden");
+    monthPicker.value = selectedMonth;
+    monthPill.classList.remove("loading");
+    initDashboard();
+  } catch (e) {
+    console.error("Błąd pobierania danych z API:", e);
+    monthPill.classList.remove("loading");
+    apiLoading.classList.add("hidden");
+    if (appData) {
+      // Dashboard już działa na wcześniejszych danych — nie zrywamy go, tylko sygnalizujemy błąd na pigułce miesiąca.
+      selectedMonth = lastGoodMonth;
+      monthPicker.value = lastGoodMonth;
+      monthPill.classList.add("error");
+      setTimeout(() => monthPill.classList.remove("error"), 2500);
+    } else {
+      dropZone.classList.remove("hidden");
+      showErr("Nie udało się pobrać danych z API. Wgraj plik ręcznie.");
+    }
+  }
+}
+
+document.getElementById("skipApiBtn").addEventListener("click", () => {
+  apiLoading.classList.add("hidden");
+  dropZone.classList.remove("hidden");
+});
 
 function getReasonForRow(rawDate, wcName, segment) {
   const wcId = WC_NAME_TO_ID[wcName.replace(/\s/g, "")];
@@ -179,7 +228,10 @@ function getReasonForRow(rawDate, wcName, segment) {
         : r.shift === expectedShift),
   );
   return match
-    ? { reason: REASON_ID_TO_NAME[match.reason_code] ?? null, shift: match.shift || "Total" }
+    ? {
+        reason: REASON_ID_TO_NAME[match.reason_code] ?? null,
+        shift: match.shift || "Total",
+      }
     : null;
 }
 
@@ -407,6 +459,28 @@ function bdColor(v) {
 const dropZone = document.getElementById("dropZone");
 const fileInput = document.getElementById("fileInput");
 const dropError = document.getElementById("dropError");
+const apiLoading = document.getElementById("apiLoading");
+
+// ── Wybór miesiąca ──
+const monthPill = document.getElementById("monthPill");
+const monthPicker = document.getElementById("monthPicker");
+monthPicker.value = selectedMonth;
+monthPill.addEventListener("click", () => {
+  if (typeof monthPicker.showPicker === "function") {
+    try {
+      monthPicker.showPicker();
+      return;
+    } catch (e) {
+      // ignore — spadamy do zwykłego focusa poniżej
+    }
+  }
+  monthPicker.focus();
+});
+monthPicker.addEventListener("change", () => {
+  if (!monthPicker.value || monthPicker.value === selectedMonth) return;
+  selectedMonth = monthPicker.value;
+  fetchReportData();
+});
 
 document.getElementById("browseBtn").addEventListener("click", (e) => {
   e.stopPropagation();
@@ -466,6 +540,8 @@ function readFile(file) {
 function resetToDrop() {
   document.getElementById("dropScreen").classList.remove("hidden");
   document.getElementById("dashboard").classList.remove("visible");
+  apiLoading.classList.add("hidden");
+  dropZone.classList.remove("hidden");
   fileInput.value = "";
   dropError.classList.remove("visible");
   if (mainChart) {
@@ -1021,3 +1097,4 @@ function setChartHeights() {
 window.addEventListener("resize", setChartHeights);
 
 fetchReasons();
+fetchReportData();
