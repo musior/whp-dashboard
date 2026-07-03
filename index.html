@@ -15,7 +15,13 @@
     <div class="drop-logo-dot"></div>
     <div class="drop-logo-text">Warehouse Productivity Dashboard</div>
   </div>
-  <div class="drop-zone" id="dropZone">
+  <div class="api-loading" id="apiLoading">
+    <div class="api-loading-spinner"></div>
+    <div class="drop-title">Pobieranie danych z API…</div>
+    <div class="drop-sub">To może chwilę potrwać</div>
+    <button class="drop-btn drop-btn-secondary" id="skipApiBtn">Wgraj plik ręcznie</button>
+  </div>
+  <div class="drop-zone hidden" id="dropZone">
     <div class="drop-icon">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     </div>
@@ -46,8 +52,11 @@
         <span id="filterLabel"></span>
         <button onclick="clearFilter()">×</button>
       </div>
-      <div class="month-pill" id="monthLabel">—</div>
-      <button class="reload-btn" onclick="resetToDrop()">Wczytaj inny plik</button>
+      <div class="month-pill" id="monthPill" title="Zmień miesiąc">
+        <span id="monthLabel">—</span>
+        <input type="month" id="monthPicker" aria-label="Wybierz miesiąc" />
+      </div>
+      <button class="reload-btn" onclick="resetToDrop()">Wgraj plik</button>
     </div>
   </div>
  
@@ -62,9 +71,9 @@
           <div style="display:flex;align-items:center;gap:16px;">
             <div class="shift-switch">
               <button class="shift-btn active" id="btnShift0" onclick="setShift(null)">Total</button>
-              <button class="shift-btn" id="btnShift1" onclick="setShift(1)">Zmiana 1</button>
-              <button class="shift-btn" id="btnShift2" onclick="setShift(2)">Zmiana 2</button>
-              <button class="shift-btn" id="btnShift3" onclick="setShift(3)">Zmiana 3</button>
+              <button class="shift-btn" id="btnShift1" onclick="setShift(1)">Grzegorz</button>
+              <button class="shift-btn" id="btnShift2" onclick="setShift(2)">Łukasz</button>
+              <button class="shift-btn" id="btnShift3" onclick="setShift(3)">Michał</button>
             </div>
             <div class="seg-switch">
               <button class="seg-btn active" id="btnTME" onclick="setSegment('TME')">3ME</button>
