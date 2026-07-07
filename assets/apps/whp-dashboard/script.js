@@ -133,7 +133,7 @@ const REASON_CODES = [
   { id: 18, name: "Instrukcje - wysoki wolumen" },
   { id: 19, name: "Niski wolumen" },
   { id: 20, name: "Opóźnienie w pickingu" },
-  { id: 21, name: "Problem ze specufikacjami/przewoźnikami" },
+  { id: 21, name: "Problem ze specyfikacjami/przewoźnikami" },
   { id: 22, name: "Ograniczona ilość miejsca odstawczego" },
 ];
 
