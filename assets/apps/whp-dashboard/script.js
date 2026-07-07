@@ -159,6 +159,7 @@ function currentMonthParam() {
 }
 let selectedMonth = currentMonthParam();
 let lastGoodMonth = selectedMonth;
+let dataCreatedAt = null;
 
 async function fetchReasons() {
   try {
@@ -181,11 +182,20 @@ async function fetchReportData() {
     const res = await fetch(`${REPORT_API_BASE}?month=${selectedMonth}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    const csvText = json.data?.data;
+    const records = Array.isArray(json.data)
+      ? json.data
+      : json.data
+        ? [json.data]
+        : [];
+    if (!records.length) {
+      throw new Error("Brak danych dla wybranego miesiąca.");
+    }
+    const csvText = records[0]?.content;
     if (!csvText || typeof csvText !== "string") {
       throw new Error("Brak danych w odpowiedzi API.");
     }
     appData = parseCSV(csvText);
+    dataCreatedAt = records[0]?.created_at ?? null;
     lastGoodMonth = selectedMonth;
     apiLoading.classList.add("hidden");
     monthPicker.value = selectedMonth;
@@ -199,8 +209,7 @@ async function fetchReportData() {
       // Dashboard już działa na wcześniejszych danych — nie zrywamy go, tylko sygnalizujemy błąd na pigułce miesiąca.
       selectedMonth = lastGoodMonth;
       monthPicker.value = lastGoodMonth;
-      monthPill.classList.add("error");
-      setTimeout(() => monthPill.classList.remove("error"), 2500);
+      showMonthError(e.message || "Nie udało się pobrać danych.");
     } else {
       dropZone.classList.remove("hidden");
       showErr("Nie udało się pobrać danych z API. Wgraj plik ręcznie.");
@@ -443,6 +452,11 @@ function fmtDate(s) {
   return m ? `${+m[3]} ${MONTHS_GEN[+m[2] - 1]} ${m[1]}` : s;
 }
 
+function fmtDateTime(s) {
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}, ${m[4]}:${m[5]}` : s;
+}
+
 // ── Kolory ──
 function bgColor(v, a) {
   if (v === null) return `rgba(74,80,104,${a || 0.45})`;
@@ -464,6 +478,18 @@ const apiLoading = document.getElementById("apiLoading");
 // ── Wybór miesiąca ──
 const monthPill = document.getElementById("monthPill");
 const monthPicker = document.getElementById("monthPicker");
+const monthErrorMsg = document.getElementById("monthErrorMsg");
+let monthErrorTimer = null;
+function showMonthError(msg) {
+  monthPill.classList.add("error");
+  monthErrorMsg.textContent = msg;
+  monthErrorMsg.classList.add("visible");
+  clearTimeout(monthErrorTimer);
+  monthErrorTimer = setTimeout(() => {
+    monthPill.classList.remove("error");
+    monthErrorMsg.classList.remove("visible");
+  }, 3500);
+}
 monthPicker.value = selectedMonth;
 monthPill.addEventListener("click", () => {
   if (typeof monthPicker.showPicker === "function") {
@@ -529,6 +555,7 @@ function readFile(file) {
   reader.onload = (e) => {
     try {
       appData = parseCSV(e.target.result);
+      dataCreatedAt = null;
       initDashboard();
     } catch (err) {
       showErr("Błąd: " + err.message);
@@ -604,8 +631,9 @@ function initDashboard() {
   document.getElementById("btnShift3").classList.remove("active");
 
   document.getElementById("monthLabel").textContent = appData.monthLabel;
-  document.getElementById("headerMeta").textContent =
-    `Centrum Dystrybucyjne · ${appData.monthLabel}`;
+  document.getElementById("headerMeta").textContent = dataCreatedAt
+    ? `Centrum Dystrybucyjne · ${appData.monthLabel} · Dane z ${fmtDateTime(dataCreatedAt)}`
+    : `Centrum Dystrybucyjne · ${appData.monthLabel}`;
 
   const dayLabels = appData.activeDays.map((dt) => dt.slice(8));
   const seg = activeSegment;
