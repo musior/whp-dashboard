@@ -312,6 +312,24 @@ body {
   margin: 0;
   pointer-events: none;
 }
+.month-error-msg {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #2a1518;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  display: none;
+  z-index: 10;
+}
+.month-error-msg.visible {
+  display: block;
+}
 .reason-codes-btn {
   background: none;
   border: 1px solid var(--border2);
