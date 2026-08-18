@@ -458,16 +458,114 @@ function fmtDateTime(s) {
   return m ? `${m[3]}.${m[2]}.${m[1]}, ${m[4]}:${m[5]}` : s;
 }
 
+// ── Motyw (jasny/ciemny) ──
+function isDarkTheme() {
+  return document.documentElement.classList.contains("dark");
+}
+const CHART_THEME = {
+  light: {
+    neutral: "144,150,171",
+    ok: "47,111,224",
+    bad: "220,38,38",
+    target: "#d97706",
+    tick1: "#5b6178",
+    tick2: "#9096ab",
+    grid: "rgba(15,23,42,0.06)",
+    axisBorder: "rgba(15,23,42,0.1)",
+    axisBorder2: "rgba(15,23,42,0.07)",
+    tooltipBg: "#ffffff",
+    tooltipBorder: "rgba(15,23,42,0.12)",
+    tooltipTitle: "#14161f",
+    tooltipBody: "#5b6178",
+  },
+  dark: {
+    neutral: "74,80,104",
+    ok: "79,142,247",
+    bad: "248,113,113",
+    target: "#f59e0b",
+    tick1: "#7b82a0",
+    tick2: "#4a5068",
+    grid: "rgba(255,255,255,0.04)",
+    axisBorder: "rgba(255,255,255,0.08)",
+    axisBorder2: "rgba(255,255,255,0.05)",
+    tooltipBg: "#1e2535",
+    tooltipBorder: "rgba(255,255,255,0.1)",
+    tooltipTitle: "#e8eaf2",
+    tooltipBody: "#7b82a0",
+  },
+};
+function chartTheme() {
+  return CHART_THEME[isDarkTheme() ? "dark" : "light"];
+}
+
+function applyStoredTheme() {
+  let t = localStorage.getItem("cp-theme");
+  if (!t)
+    t = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  document.documentElement.classList.toggle("dark", t === "dark");
+}
+
+function applyChartOptionsTheme() {
+  if (!mainChart || !dayChart) return;
+  const t = chartTheme();
+
+  mainChart.data.datasets[1].borderColor = t.target;
+  mainChart.options.plugins.tooltip.backgroundColor = t.tooltipBg;
+  mainChart.options.plugins.tooltip.borderColor = t.tooltipBorder;
+  mainChart.options.plugins.tooltip.titleColor = t.tooltipTitle;
+  mainChart.options.plugins.tooltip.bodyColor = t.tooltipBody;
+  mainChart.options.scales.x.grid.color = t.grid;
+  mainChart.options.scales.x.ticks.color = t.tick1;
+  mainChart.options.scales.x.border.color = t.axisBorder;
+  mainChart.options.scales.y.grid.color = t.grid;
+  mainChart.options.scales.y.ticks.color = t.tick1;
+  mainChart.options.scales.y.border.color = t.axisBorder;
+
+  dayChart.data.datasets[1].borderColor = t.target;
+  dayChart.options.plugins.tooltip.backgroundColor = t.tooltipBg;
+  dayChart.options.plugins.tooltip.borderColor = t.tooltipBorder;
+  dayChart.options.plugins.tooltip.titleColor = t.tooltipTitle;
+  dayChart.options.plugins.tooltip.bodyColor = t.tooltipBody;
+  dayChart.options.scales.x.ticks.color = t.tick2;
+  dayChart.options.scales.x.border.color = t.axisBorder2;
+  dayChart.options.scales.y.grid.color = t.grid;
+  dayChart.options.scales.y.ticks.color = t.tick2;
+  dayChart.options.scales.y.border.color = t.axisBorder2;
+}
+
+function refreshTheme() {
+  applyStoredTheme();
+  if (!appData || !mainChart || !dayChart) return;
+  if (selectedDay) selectDay(selectedDay);
+  else clearFilter();
+  applyChartOptionsTheme();
+  mainChart.update();
+  dayChart.update();
+}
+
+window.addEventListener("storage", (e) => {
+  if (e.key === "cp-theme") refreshTheme();
+});
+window
+  .matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => {
+    if (!localStorage.getItem("cp-theme")) refreshTheme();
+  });
+
 // ── Kolory ──
 function bgColor(v, a) {
-  if (v === null) return `rgba(74,80,104,${a || 0.45})`;
+  const t = chartTheme();
+  if (v === null) return `rgba(${t.neutral},${a || 0.45})`;
   return v >= TARGET
-    ? `rgba(79,142,247,${a || 0.75})`
-    : `rgba(248,113,113,${a || 0.75})`;
+    ? `rgba(${t.ok},${a || 0.75})`
+    : `rgba(${t.bad},${a || 0.75})`;
 }
 function bdColor(v) {
-  if (v === null) return "rgba(74,80,104,0.55)";
-  return v >= TARGET ? "#4f8ef7" : "#f87171";
+  const t = chartTheme();
+  if (v === null) return `rgba(${t.neutral},0.55)`;
+  return v >= TARGET ? `rgb(${t.ok})` : `rgb(${t.bad})`;
 }
 
 // ── Drop zone ──
@@ -643,6 +741,7 @@ function initDashboard() {
   const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
   const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
   const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
+  const th = chartTheme();
 
   // MAIN CHART
   const mc = document.getElementById("mainChart").getContext("2d");
@@ -665,7 +764,7 @@ function initDashboard() {
           label: "Cel",
           data: new Array(cols.length).fill(TARGET),
           type: "line",
-          borderColor: "#f59e0b",
+          borderColor: th.target,
           borderDash: [5, 4],
           borderWidth: 2,
           pointRadius: 0,
@@ -682,11 +781,11 @@ function initDashboard() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#1e2535",
-          borderColor: "rgba(255,255,255,0.1)",
+          backgroundColor: th.tooltipBg,
+          borderColor: th.tooltipBorder,
           borderWidth: 1,
-          titleColor: "#e8eaf2",
-          bodyColor: "#7b82a0",
+          titleColor: th.tooltipTitle,
+          bodyColor: th.tooltipBody,
           padding: 10,
           callbacks: {
             label: (ctx) => {
@@ -701,24 +800,24 @@ function initDashboard() {
       },
       scales: {
         x: {
-          grid: { color: "rgba(255,255,255,0.04)" },
+          grid: { color: th.grid },
           ticks: {
-            color: "#7b82a0",
+            color: th.tick1,
             font: { size: 11, family: "'DM Mono'" },
             autoSkip: false,
           },
-          border: { color: "rgba(255,255,255,0.08)" },
+          border: { color: th.axisBorder },
         },
         y: {
           min: 0,
           max: yMaxMain,
-          grid: { color: "rgba(255,255,255,0.04)" },
+          grid: { color: th.grid },
           ticks: {
-            color: "#7b82a0",
+            color: th.tick1,
             font: { size: 11 },
             callback: (v) => v + "%",
           },
-          border: { color: "rgba(255,255,255,0.08)" },
+          border: { color: th.axisBorder },
         },
       },
     },
@@ -745,7 +844,7 @@ function initDashboard() {
           label: "Cel",
           data: new Array(dayLabels.length).fill(TARGET),
           type: "line",
-          borderColor: "#f59e0b",
+          borderColor: th.target,
           borderDash: [4, 3],
           borderWidth: 1.5,
           pointRadius: 0,
@@ -768,11 +867,11 @@ function initDashboard() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#1e2535",
-          borderColor: "rgba(255,255,255,0.1)",
+          backgroundColor: th.tooltipBg,
+          borderColor: th.tooltipBorder,
           borderWidth: 1,
-          titleColor: "#e8eaf2",
-          bodyColor: "#7b82a0",
+          titleColor: th.tooltipTitle,
+          bodyColor: th.tooltipBody,
           padding: 10,
           callbacks: {
             title: (ctx) => fmtDate(appData.activeDays[ctx[0].dataIndex]),
@@ -790,24 +889,24 @@ function initDashboard() {
         x: {
           grid: { display: false },
           ticks: {
-            color: "#4a5068",
+            color: th.tick2,
             font: { size: 10, family: "'DM Mono'" },
             maxRotation: 0,
             autoSkip: true,
             maxTicksLimit: 16,
           },
-          border: { color: "rgba(255,255,255,0.05)" },
+          border: { color: th.axisBorder2 },
         },
         y: {
           min: 0,
           max: yMaxDay,
-          grid: { color: "rgba(255,255,255,0.04)" },
+          grid: { color: th.grid },
           ticks: {
-            color: "#4a5068",
+            color: th.tick2,
             font: { size: 10 },
             callback: (v) => v + "%",
           },
-          border: { color: "rgba(255,255,255,0.05)" },
+          border: { color: th.axisBorder2 },
         },
       },
     },
@@ -940,11 +1039,12 @@ function selectDay(date) {
 
   const selIdx = appData.activeDays.indexOf(date);
   const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const selColor = `rgb(${chartTheme().ok})`;
   dayChart.data.datasets[0].backgroundColor = appData.activeDays.map((dt, i) =>
-    i === selIdx ? "#4f8ef7" : bgColor(dayProd[i], 0.18),
+    i === selIdx ? selColor : bgColor(dayProd[i], 0.18),
   );
   dayChart.data.datasets[0].borderColor = appData.activeDays.map((dt, i) =>
-    i === selIdx ? "#4f8ef7" : bgColor(dayProd[i], 0.4),
+    i === selIdx ? selColor : bgColor(dayProd[i], 0.4),
   );
   dayChart.update();
 
