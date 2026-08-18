@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Warehouse Productivity Dashboard</title>
+    <script>
+      var t = localStorage.getItem("cp-theme");
+      if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      if (t === "dark") document.documentElement.classList.add("dark");
+    </script>
     <link rel="stylesheet" href="/assets/apps/whp-dashboard/styles.css?=v1.0" />
     <script src="/assets/vendor/chart.umd.js"></script>
   </head>
@@ -81,9 +86,9 @@
               <button class="seg-btn" id="btnSOL" onclick="setSegment('SOL')">SOL</button>
             </div>
             <div class="legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Powyżej celu</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Poniżej celu</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#4a5068"></div>Brak danych</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Powyżej celu</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Poniżej celu</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--text3)"></div>Brak danych</div>
               <div class="legend-item"><div class="legend-line"></div>Cel 85%</div>
             </div>
           </div>
