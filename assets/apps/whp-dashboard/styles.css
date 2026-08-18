@@ -42,6 +42,33 @@
   padding: 0;
 }
 :root {
+  --font: "DM Sans", sans-serif;
+  --mono: "DM Mono", monospace;
+
+  /* Light theme (default) */
+  --bg: #f4f5f9;
+  --surface: #ffffff;
+  --surface2: #eef0f6;
+  --border: rgba(15, 23, 42, 0.08);
+  --border2: rgba(15, 23, 42, 0.14);
+  --text: #14161f;
+  --text2: #5b6178;
+  --text3: #9096ab;
+  --accent: #2f6fe0;
+  --green: #059669;
+  --red: #dc2626;
+  --amber: #b45309;
+  --target-line: #d97706;
+  --shift-accent: #6b46c1;
+  --danger-surface: #fef2f2;
+
+  --chart-grid: rgba(15, 23, 42, 0.06);
+  --chart-axis-border: rgba(15, 23, 42, 0.1);
+  --chart-axis-border2: rgba(15, 23, 42, 0.07);
+  --chart-tooltip-border: rgba(15, 23, 42, 0.12);
+}
+
+:root.dark {
   --bg: #0f1117;
   --surface: #161b27;
   --surface2: #1e2535;
@@ -55,8 +82,13 @@
   --red: #f87171;
   --amber: #fbbf24;
   --target-line: #f59e0b;
-  --font: "DM Sans", sans-serif;
-  --mono: "DM Mono", monospace;
+  --shift-accent: #7c5cbf;
+  --danger-surface: #2a1518;
+
+  --chart-grid: rgba(255, 255, 255, 0.04);
+  --chart-axis-border: rgba(255, 255, 255, 0.08);
+  --chart-axis-border2: rgba(255, 255, 255, 0.05);
+  --chart-tooltip-border: rgba(255, 255, 255, 0.1);
 }
 body {
   background: var(--bg);
@@ -316,7 +348,7 @@ body {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: #2a1518;
+  background: var(--danger-surface);
   border: 1px solid rgba(248, 113, 113, 0.35);
   color: var(--red);
   font-size: 11px;
@@ -634,7 +666,7 @@ tbody td:first-child {
 .shift-tag {
   font-size: 11px;
   font-family: var(--mono);
-  color: #7c5cbf;
+  color: var(--shift-accent);
 }
 .comment-tag {
   font-size: 11px;
@@ -683,7 +715,7 @@ tbody td:first-child {
   text-align: center;
 }
 .shift-btn.active {
-  background: #7c5cbf;
+  background: var(--shift-accent);
   color: #fff;
 }
 .shift-btn:not(.active):hover {
