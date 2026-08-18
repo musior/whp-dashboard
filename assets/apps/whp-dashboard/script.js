@@ -240,6 +240,7 @@ function getReasonForRow(rawDate, wcName, segment) {
     ? {
         reason: REASON_ID_TO_NAME[match.reason_code] ?? null,
         shift: match.shift || "Total",
+        comment: match.comment || null,
       }
     : null;
 }
@@ -1073,7 +1074,7 @@ function renderTable(day) {
     rows.length + " poniżej celu";
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">✓</div>Brak procesów poniżej normy</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">✓</div>Brak procesów poniżej normy</div></td></tr>`;
     return;
   }
 
@@ -1086,12 +1087,17 @@ function renderTable(day) {
       const shiftCell = data
         ? `<span class="shift-tag">${data.shift}</span>`
         : `<span class="pending-tag">—</span>`;
+      const commentCell = data?.comment
+        ? `<span class="comment-tag">${data.comment}</span>`
+        : `<span class="pending-tag">—</span>`;
+      const rowClass = data?.reason ? "" : ' class="row-missing-reason"';
       return `
-    <tr>
+    <tr${rowClass}>
       <td>${r.date}</td>
       <td><span class="wc-tag">${r.wc}</span> <span class="val-tag">${r.val.toFixed(1)}%</span></td>
       <td>${shiftCell}</td>
       <td>${reasonCell}</td>
+      <td>${commentCell}</td>
     </tr>
   `;
     })
