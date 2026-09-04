@@ -163,12 +163,23 @@ let dataCreatedAt = null;
 
 async function fetchReasons() {
   try {
-    const res = await fetch(`${API_BASE}?key=${API_KEY}&type=GET`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    reasonsData = Array.isArray(data)
-      ? data
-      : (data.results ?? data.data ?? []);
+    let all = [];
+    let page = 1;
+    let lastPage = 1;
+    do {
+      const res = await fetch(
+        `${API_BASE}?key=${API_KEY}&type=GET&per_page=1000&page=${page}`,
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const pageData = Array.isArray(json)
+        ? json
+        : (json.results ?? json.data ?? []);
+      all = all.concat(pageData);
+      lastPage = json?.meta?.last_page ?? 1;
+      page++;
+    } while (page <= lastPage);
+    reasonsData = all;
   } catch (e) {
     console.error("Błąd pobierania przyczyn:", e);
     reasonsData = [];
