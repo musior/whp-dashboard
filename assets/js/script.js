@@ -1,0 +1,1245 @@
+const TARGET = 85;
+
+const TME_COLS = [
+  "TME_UNLOADING_PROD",
+  "TME_SORT_PROD",
+  "TME_XDOCK_PROD",
+  "TME_FPALLETS_PROD",
+  "TME_MEZZ_PROD",
+  "TME_PICK_R_PROD",
+  "TME_PICK_A_PROD",
+  "TME_MISSIONS_PROD",
+  "TME_EXPORTS_PROD",
+  "TME_VAS_PROD",
+  "TME_CONTROL_PROD",
+  "TME_FOIL_PROD",
+  "TME_LOADING_PROD",
+];
+
+const SOL_COLS = [
+  "SOL_UNLOADING_PROD",
+  "SOL_SORT_PROD",
+  "SOL_XDOCK_PROD",
+  "SOL_FPALLETS_PROD",
+  "SOL_MEZZ_PROD",
+  "SOL_PICK_R_PROD",
+  "SOL_PICK_A_PROD",
+  "SOL_MISSIONS_PROD",
+  "SOL_EXPORTS_PROD",
+  "SOL_VAS_PROD",
+  "SOL_CONTROL_PROD",
+  "SOL_FOIL_PROD",
+  "SOL_LOADING_PROD",
+];
+
+const PROC_LABEL = {
+  TME_PICK_R_PROD: "Picking regały",
+  TME_PICK_A_PROD: "Picking antresola",
+  TME_MISSIONS_PROD: "Misje",
+  TME_EXPORTS_PROD: "Kontrola exportów",
+  TME_FOIL_PROD: "Foliowanie",
+  TME_LOADING_PROD: "Załadunki",
+  TME_UNLOADING_PROD: "Rozładunek",
+  TME_FPALLETS_PROD: "Przyjęcie palet",
+  TME_SORT_PROD: "Sortowanie M3",
+  TME_MEZZ_PROD: "Przyjęcie drobnicy",
+  TME_XDOCK_PROD: "Cross-dock",
+  TME_CONTROL_PROD: "Check & Pack",
+  TME_VAS_PROD: "VAS",
+  SOL_PICK_R_PROD: "Picking regały",
+  SOL_PICK_A_PROD: "Picking antresola",
+  SOL_MISSIONS_PROD: "Misje",
+  SOL_EXPORTS_PROD: "Kontrola exportów",
+  SOL_FOIL_PROD: "Foliowanie",
+  SOL_LOADING_PROD: "Załadunki",
+  SOL_UNLOADING_PROD: "Rozładunek",
+  SOL_FPALLETS_PROD: "Przyjęcie palet",
+  SOL_SORT_PROD: "Sortowanie M3",
+  SOL_MEZZ_PROD: "Przyjęcie drobnicy",
+  SOL_XDOCK_PROD: "Cross-dock",
+  SOL_CONTROL_PROD: "Check & Pack",
+  SOL_VAS_PROD: "VAS",
+};
+
+const MONTHS_PL = [
+  "Styczeń",
+  "Luty",
+  "Marzec",
+  "Kwiecień",
+  "Maj",
+  "Czerwiec",
+  "Lipiec",
+  "Sierpień",
+  "Wrzesień",
+  "Październik",
+  "Listopad",
+  "Grudzień",
+];
+const MONTHS_GEN = [
+  "stycznia",
+  "lutego",
+  "marca",
+  "kwietnia",
+  "maja",
+  "czerwca",
+  "lipca",
+  "sierpnia",
+  "września",
+  "października",
+  "listopada",
+  "grudnia",
+];
+
+const API_KEY = "K3hT9sYrP2nV8bNq";
+const API_BASE = "https://cloud.fiege.pl/api/apps/performance/reasons/";
+const REPORT_API_BASE =
+  "https://cloud.fiege.pl/api/datalake/performance/report/";
+
+const WORK_CENTERS = [
+  { id: 1, name: "Przyjęcie drobnicy" },
+  { id: 2, name: "Przyjęcie palet" },
+  { id: 3, name: "Cross-dock" },
+  { id: 4, name: "Rozładunek" },
+  { id: 5, name: "Sortowanie M3" },
+  { id: 6, name: "Załadunki" },
+  { id: 7, name: "Picking antresola" },
+  { id: 8, name: "Kontrola exportów" },
+  { id: 9, name: "Misje" },
+  { id: 10, name: "Foliowanie" },
+  { id: 11, name: "Picking regały" },
+  { id: 12, name: "Check & Pack" },
+  { id: 13, name: "VAS" },
+  { id: 14, name: "Labelling per hour" },
+];
+
+const REASON_CODES = [
+  { id: 1, name: "Conso dostaw" },
+  { id: 2, name: "Problemy sprzętowe" },
+  { id: 3, name: "Podwójne sortowanie w strefie 20K" },
+  { id: 4, name: "Rozbieżności w dostawach" },
+  { id: 5, name: "Error" },
+  { id: 6, name: "Sortowanie LOT/DW" },
+  { id: 7, name: "Dodatkowe czynności - celne" },
+  { id: 8, name: "Dodatkowe czynności - DD" },
+  { id: 9, name: "Nowy operator, kontrola reszty" },
+  { id: 10, name: "Błędnie załadowany towar" },
+  { id: 11, name: "Szkolenie nowego pracownika" },
+  { id: 12, name: "Wymogi klienta" },
+  { id: 13, name: "Zamówienia paczkowe" },
+  { id: 14, name: "Rozdrobnienie Pickingu" },
+  { id: 15, name: "Niewykwalifikowani pracownicy" },
+  { id: 16, name: "Zamówienia drobnicowe" },
+  { id: 17, name: "Zgrzewy - wysoki wolumen" },
+  { id: 18, name: "Instrukcje - wysoki wolumen" },
+  { id: 19, name: "Niski wolumen" },
+  { id: 20, name: "Opóźnienie w pickingu" },
+  { id: 21, name: "Problem ze specyfikacjami/przewoźnikami" },
+  { id: 22, name: "Ograniczona ilość miejsca odstawczego" },
+];
+
+const WC_NAME_TO_ID = Object.fromEntries(
+  WORK_CENTERS.map((wc) => [wc.name.replace(/\s/g, ""), wc.id]),
+);
+const REASON_ID_TO_NAME = Object.fromEntries(
+  REASON_CODES.map((rc) => [rc.id, rc.name]),
+);
+
+let appData = null;
+let mainChart = null,
+  dayChart = null;
+let selectedDay = null;
+let activeSegment = "TME"; // 'TME' | 'SOL'
+let activeShift = null; // null | 1 | 2 | 3
+let reasonsData = [];
+
+// ── Wybór miesiąca (?month=YYYY-MM) ──
+function currentMonthParam() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+let selectedMonth = currentMonthParam();
+let lastGoodMonth = selectedMonth;
+let dataCreatedAt = null;
+
+async function fetchReasons() {
+  try {
+    let all = [];
+    let page = 1;
+    let lastPage = 1;
+    do {
+      const res = await fetch(
+        `${API_BASE}?key=${API_KEY}&type=GET&per_page=1000&page=${page}`,
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const pageData = Array.isArray(json)
+        ? json
+        : (json.results ?? json.data ?? []);
+      all = all.concat(pageData);
+      lastPage = json?.meta?.last_page ?? 1;
+      page++;
+    } while (page <= lastPage);
+    reasonsData = all;
+  } catch (e) {
+    console.error("Błąd pobierania przyczyn:", e);
+    reasonsData = [];
+  }
+}
+
+async function fetchReportData() {
+  monthPill.classList.add("loading");
+  monthPill.classList.remove("error");
+  try {
+    const res = await fetch(`${REPORT_API_BASE}?month=${selectedMonth}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const records = Array.isArray(json.data)
+      ? json.data
+      : json.data
+        ? [json.data]
+        : [];
+    if (!records.length) {
+      throw new Error("Brak danych dla wybranego miesiąca.");
+    }
+    const csvText = records[0]?.content;
+    if (!csvText || typeof csvText !== "string") {
+      throw new Error("Brak danych w odpowiedzi API.");
+    }
+    appData = parseCSV(csvText);
+    dataCreatedAt = records[0]?.created_at ?? null;
+    lastGoodMonth = selectedMonth;
+    apiLoading.classList.add("hidden");
+    monthPicker.value = selectedMonth;
+    monthPill.classList.remove("loading");
+    initDashboard();
+  } catch (e) {
+    console.error("Błąd pobierania danych z API:", e);
+    monthPill.classList.remove("loading");
+    apiLoading.classList.add("hidden");
+    if (appData) {
+      // Dashboard już działa na wcześniejszych danych — nie zrywamy go, tylko sygnalizujemy błąd na pigułce miesiąca.
+      selectedMonth = lastGoodMonth;
+      monthPicker.value = lastGoodMonth;
+      showMonthError(e.message || "Nie udało się pobrać danych.");
+    } else {
+      dropZone.classList.remove("hidden");
+      showErr("Nie udało się pobrać danych z API. Wgraj plik ręcznie.");
+    }
+  }
+}
+
+document.getElementById("skipApiBtn").addEventListener("click", () => {
+  apiLoading.classList.add("hidden");
+  dropZone.classList.remove("hidden");
+});
+
+function getReasonForRow(rawDate, wcName, segment) {
+  const wcId = WC_NAME_TO_ID[wcName.replace(/\s/g, "")];
+  if (wcId === undefined) return null;
+  const expectedShift = activeShift === null ? null : `Zmiana ${activeShift}`;
+  const match = reasonsData.find(
+    (r) =>
+      r.date === rawDate &&
+      r.work_center === wcId &&
+      r.deleted_at === null &&
+      (segment === "TME" ? r.client === "3M" : r.client === "Solventum") &&
+      (expectedShift === null
+        ? !r.shift || r.shift === "Total"
+        : r.shift === expectedShift),
+  );
+  return match
+    ? {
+        reason: REASON_ID_TO_NAME[match.reason_code] ?? null,
+        shift: match.shift || "Total",
+        comment: match.comment || null,
+      }
+    : null;
+}
+
+// ── Parser wartości (przecinek decimal, Infinity/0 → null) ──
+function pv(raw) {
+  const s = String(raw === undefined || raw === null ? "" : raw).trim();
+  if (!s || s === "Infinity" || s === "-Infinity") return null;
+  const v = parseFloat(s.replace(",", "."));
+  return !isNaN(v) && v > 0 ? v : null;
+}
+
+// ── Parser CSV ──
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) throw new Error("Plik jest pusty.");
+  const sep = lines[0].includes(";") ? ";" : ",";
+  const headers = lines[0]
+    .split(sep)
+    .map((h) => h.trim().replace(/^"|"$/g, ""));
+
+  for (const r of [
+    "DATE",
+    "TYPE",
+    ...TME_COLS,
+    ...SOL_COLS,
+    "TME_PROD",
+    "SOL_PROD",
+    "TOTAL_PROD",
+  ]) {
+    if (!headers.includes(r)) throw new Error(`Brak kolumny: ${r}`);
+  }
+
+  const rows = lines
+    .slice(1)
+    .map((l) => {
+      const parts = l.split(sep);
+      const o = {};
+      headers.forEach(
+        (h, i) => (o[h] = (parts[i] || "").trim().replace(/^"|"$/g, "")),
+      );
+      return o;
+    })
+    .filter(
+      (r) =>
+        r.TYPE === "MONTH_TOTAL" ||
+        r.TYPE === "TOTAL" ||
+        r.TYPE === "TOTAL_SHIFT_1" ||
+        r.TYPE === "TOTAL_SHIFT_2" ||
+        r.TYPE === "TOTAL_SHIFT_3" ||
+        r.TYPE === "SHIFT_1" ||
+        r.TYPE === "SHIFT_2" ||
+        r.TYPE === "SHIFT_3",
+    );
+
+  const monthRow = rows.find((r) => r.TYPE === "MONTH_TOTAL");
+  const dailyRows = rows.filter((r) => r.TYPE === "TOTAL");
+  if (!monthRow) throw new Error("Brak wiersza TYPE=MONTH_TOTAL.");
+  if (!dailyRows.length) throw new Error("Brak wierszy TYPE=TOTAL.");
+
+  const dateStr = monthRow.DATE || dailyRows[0].DATE || "";
+  const dm = dateStr.match(/^(\d{4})-(\d{2})/);
+  if (!dm) throw new Error("Nieznany format daty: " + dateStr);
+  const year = +dm[1],
+    month = +dm[2];
+  const monthLabel = `${MONTHS_PL[month - 1]} ${year}`;
+
+  // Wartości miesięczne
+  const monthValues = { TME: {}, SOL: {} };
+  TME_COLS.forEach((c) => (monthValues.TME[c] = pv(monthRow[c])));
+  SOL_COLS.forEach((c) => (monthValues.SOL[c] = pv(monthRow[c])));
+  const tmeProdMonth = pv(monthRow["TME_PROD"]);
+  const solProdMonth = pv(monthRow["SOL_PROD"]);
+
+  // Wartości dzienne
+  const dailyValues = { TME: {}, SOL: {} };
+  const dailyTotals = {},
+    dailyTmeProd = {},
+    dailySolProd = {};
+  dailyRows.forEach((r) => {
+    const m = r.DATE.match(/^(\d{4}-\d{2}-\d{2})$/);
+    if (!m) return;
+    const date = m[1];
+    dailyValues.TME[date] = {};
+    dailyValues.SOL[date] = {};
+    TME_COLS.forEach((c) => (dailyValues.TME[date][c] = pv(r[c])));
+    SOL_COLS.forEach((c) => (dailyValues.SOL[date][c] = pv(r[c])));
+    dailyTotals[date] = pv(r.TOTAL_PROD);
+    dailyTmeProd[date] = pv(r.TME_PROD);
+    dailySolProd[date] = pv(r.SOL_PROD);
+  });
+
+  // Shift data
+  const shiftMonthValues = {};
+  const shiftDailyValues = {};
+  const shiftDailyTmeProd = {};
+  const shiftDailySolProd = {};
+  const shiftTmeProdMonth = {};
+  const shiftSolProdMonth = {};
+
+  [1, 2, 3].forEach((s) => {
+    const smRow = rows.find((r) => r.TYPE === `TOTAL_SHIFT_${s}`);
+    shiftMonthValues[s] = { TME: {}, SOL: {} };
+    if (smRow) {
+      TME_COLS.forEach((c) => (shiftMonthValues[s].TME[c] = pv(smRow[c])));
+      SOL_COLS.forEach((c) => (shiftMonthValues[s].SOL[c] = pv(smRow[c])));
+      shiftTmeProdMonth[s] = pv(smRow["TME_PROD"]);
+      shiftSolProdMonth[s] = pv(smRow["SOL_PROD"]);
+    } else {
+      TME_COLS.forEach((c) => (shiftMonthValues[s].TME[c] = null));
+      SOL_COLS.forEach((c) => (shiftMonthValues[s].SOL[c] = null));
+      shiftTmeProdMonth[s] = null;
+      shiftSolProdMonth[s] = null;
+    }
+
+    shiftDailyValues[s] = { TME: {}, SOL: {} };
+    shiftDailyTmeProd[s] = {};
+    shiftDailySolProd[s] = {};
+    rows
+      .filter((r) => r.TYPE === `SHIFT_${s}`)
+      .forEach((r) => {
+        const m = r.DATE.match(/^(\d{4}-\d{2}-\d{2})$/);
+        if (!m) return;
+        const date = m[1];
+        shiftDailyValues[s].TME[date] = {};
+        shiftDailyValues[s].SOL[date] = {};
+        TME_COLS.forEach((c) => (shiftDailyValues[s].TME[date][c] = pv(r[c])));
+        SOL_COLS.forEach((c) => (shiftDailyValues[s].SOL[date][c] = pv(r[c])));
+        shiftDailyTmeProd[s][date] = pv(r["TME_PROD"]);
+        shiftDailySolProd[s][date] = pv(r["SOL_PROD"]);
+      });
+  });
+
+  const activeDays = Object.keys(dailyValues.TME).sort();
+
+  // Prekalkuluj maksima osi Y (górny wykres: max wartości procesów; dolny: max daily prod)
+  function calcYMax(vals) {
+    const clean = vals.filter((v) => v !== null);
+    if (!clean.length) return 110;
+    const raw = Math.max(...clean);
+    return Math.ceil(Math.min(raw * 1.12, raw + 50) / 10) * 10;
+  }
+
+  const tmeMonthMax = calcYMax(TME_COLS.map((c) => monthValues.TME[c]));
+  const solMonthMax = calcYMax(SOL_COLS.map((c) => monthValues.SOL[c]));
+  const tmeDailyMax = calcYMax(activeDays.map((dt) => dailyTmeProd[dt]));
+  const solDailyMax = calcYMax(activeDays.map((dt) => dailySolProd[dt]));
+
+  // Max per dzień (dla górnego wykresu przy filtrowaniu)
+  const tmeDayMax = {},
+    solDayMax = {};
+  activeDays.forEach((dt) => {
+    tmeDayMax[dt] = calcYMax(TME_COLS.map((c) => dailyValues.TME[dt][c]));
+    solDayMax[dt] = calcYMax(SOL_COLS.map((c) => dailyValues.SOL[dt][c]));
+  });
+
+  const shiftYMax = {};
+  [1, 2, 3].forEach((s) => {
+    shiftYMax[s] = {
+      tmeMonth: calcYMax(TME_COLS.map((c) => shiftMonthValues[s].TME[c])),
+      solMonth: calcYMax(SOL_COLS.map((c) => shiftMonthValues[s].SOL[c])),
+      tmeDaily: calcYMax(activeDays.map((dt) => shiftDailyTmeProd[s][dt])),
+      solDaily: calcYMax(activeDays.map((dt) => shiftDailySolProd[s][dt])),
+      tmeDayProc: {},
+      solDayProc: {},
+    };
+    activeDays.forEach((dt) => {
+      shiftYMax[s].tmeDayProc[dt] = calcYMax(
+        TME_COLS.map((c) => shiftDailyValues[s].TME[dt]?.[c] ?? null),
+      );
+      shiftYMax[s].solDayProc[dt] = calcYMax(
+        SOL_COLS.map((c) => shiftDailyValues[s].SOL[dt]?.[c] ?? null),
+      );
+    });
+  });
+
+  return {
+    year,
+    month,
+    monthLabel,
+    monthValues,
+    tmeProdMonth,
+    solProdMonth,
+    dailyValues,
+    dailyTotals,
+    dailyTmeProd,
+    dailySolProd,
+    activeDays,
+    shiftMonthValues,
+    shiftTmeProdMonth,
+    shiftSolProdMonth,
+    shiftDailyValues,
+    shiftDailyTmeProd,
+    shiftDailySolProd,
+    shiftYMax,
+    yMax: {
+      tmeMonth: tmeMonthMax,
+      solMonth: solMonthMax,
+      tmeDaily: tmeDailyMax,
+      solDaily: solDailyMax,
+      tmeDayProc: tmeDayMax,
+      solDayProc: solDayMax,
+    },
+  };
+}
+
+// ── Formatowanie daty ──
+function fmtDate(s) {
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${+m[3]} ${MONTHS_GEN[+m[2] - 1]} ${m[1]}` : s;
+}
+
+function fmtDateTime(s) {
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}, ${m[4]}:${m[5]}` : s;
+}
+
+// ── Motyw (jasny/ciemny) ──
+function isDarkTheme() {
+  return document.documentElement.classList.contains("dark");
+}
+const CHART_THEME = {
+  light: {
+    neutral: "144,150,171",
+    ok: "47,111,224",
+    bad: "220,38,38",
+    target: "#d97706",
+    tick1: "#5b6178",
+    tick2: "#9096ab",
+    grid: "rgba(15,23,42,0.06)",
+    axisBorder: "rgba(15,23,42,0.1)",
+    axisBorder2: "rgba(15,23,42,0.07)",
+    tooltipBg: "#ffffff",
+    tooltipBorder: "rgba(15,23,42,0.12)",
+    tooltipTitle: "#14161f",
+    tooltipBody: "#5b6178",
+  },
+  dark: {
+    neutral: "74,80,104",
+    ok: "79,142,247",
+    bad: "248,113,113",
+    target: "#f59e0b",
+    tick1: "#7b82a0",
+    tick2: "#4a5068",
+    grid: "rgba(255,255,255,0.04)",
+    axisBorder: "rgba(255,255,255,0.08)",
+    axisBorder2: "rgba(255,255,255,0.05)",
+    tooltipBg: "#1e2535",
+    tooltipBorder: "rgba(255,255,255,0.1)",
+    tooltipTitle: "#e8eaf2",
+    tooltipBody: "#7b82a0",
+  },
+};
+function chartTheme() {
+  return CHART_THEME[isDarkTheme() ? "dark" : "light"];
+}
+
+function applyStoredTheme() {
+  let t = localStorage.getItem("cp-theme");
+  if (!t)
+    t = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  document.documentElement.classList.toggle("dark", t === "dark");
+}
+
+function applyChartOptionsTheme() {
+  if (!mainChart || !dayChart) return;
+  const t = chartTheme();
+
+  mainChart.data.datasets[1].borderColor = t.target;
+  mainChart.options.plugins.tooltip.backgroundColor = t.tooltipBg;
+  mainChart.options.plugins.tooltip.borderColor = t.tooltipBorder;
+  mainChart.options.plugins.tooltip.titleColor = t.tooltipTitle;
+  mainChart.options.plugins.tooltip.bodyColor = t.tooltipBody;
+  mainChart.options.scales.x.grid.color = t.grid;
+  mainChart.options.scales.x.ticks.color = t.tick1;
+  mainChart.options.scales.x.border.color = t.axisBorder;
+  mainChart.options.scales.y.grid.color = t.grid;
+  mainChart.options.scales.y.ticks.color = t.tick1;
+  mainChart.options.scales.y.border.color = t.axisBorder;
+
+  dayChart.data.datasets[1].borderColor = t.target;
+  dayChart.options.plugins.tooltip.backgroundColor = t.tooltipBg;
+  dayChart.options.plugins.tooltip.borderColor = t.tooltipBorder;
+  dayChart.options.plugins.tooltip.titleColor = t.tooltipTitle;
+  dayChart.options.plugins.tooltip.bodyColor = t.tooltipBody;
+  dayChart.options.scales.x.ticks.color = t.tick2;
+  dayChart.options.scales.x.border.color = t.axisBorder2;
+  dayChart.options.scales.y.grid.color = t.grid;
+  dayChart.options.scales.y.ticks.color = t.tick2;
+  dayChart.options.scales.y.border.color = t.axisBorder2;
+}
+
+function refreshTheme() {
+  applyStoredTheme();
+  if (!appData || !mainChart || !dayChart) return;
+  if (selectedDay) selectDay(selectedDay);
+  else clearFilter();
+  applyChartOptionsTheme();
+  mainChart.update();
+  dayChart.update();
+}
+
+window.addEventListener("storage", (e) => {
+  if (e.key === "cp-theme") refreshTheme();
+});
+window
+  .matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => {
+    if (!localStorage.getItem("cp-theme")) refreshTheme();
+  });
+
+// ── Kolory ──
+function bgColor(v, a) {
+  const t = chartTheme();
+  if (v === null) return `rgba(${t.neutral},${a || 0.45})`;
+  return v >= TARGET
+    ? `rgba(${t.ok},${a || 0.75})`
+    : `rgba(${t.bad},${a || 0.75})`;
+}
+function bdColor(v) {
+  const t = chartTheme();
+  if (v === null) return `rgba(${t.neutral},0.55)`;
+  return v >= TARGET ? `rgb(${t.ok})` : `rgb(${t.bad})`;
+}
+
+// ── Drop zone ──
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+const dropError = document.getElementById("dropError");
+const apiLoading = document.getElementById("apiLoading");
+
+// ── Wybór miesiąca ──
+const monthPill = document.getElementById("monthPill");
+const monthPicker = document.getElementById("monthPicker");
+const monthErrorMsg = document.getElementById("monthErrorMsg");
+let monthErrorTimer = null;
+function showMonthError(msg) {
+  monthPill.classList.add("error");
+  monthErrorMsg.textContent = msg;
+  monthErrorMsg.classList.add("visible");
+  clearTimeout(monthErrorTimer);
+  monthErrorTimer = setTimeout(() => {
+    monthPill.classList.remove("error");
+    monthErrorMsg.classList.remove("visible");
+  }, 3500);
+}
+monthPicker.value = selectedMonth;
+monthPill.addEventListener("click", () => {
+  if (typeof monthPicker.showPicker === "function") {
+    try {
+      monthPicker.showPicker();
+      return;
+    } catch (e) {
+      // ignore — spadamy do zwykłego focusa poniżej
+    }
+  }
+  monthPicker.focus();
+});
+monthPicker.addEventListener("change", () => {
+  if (!monthPicker.value || monthPicker.value === selectedMonth) return;
+  selectedMonth = monthPicker.value;
+  fetchReportData();
+});
+
+document.getElementById("browseBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  fileInput.click();
+});
+dropZone.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", (e) => {
+  if (e.target.files[0]) readFile(e.target.files[0]);
+});
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("drag-over");
+});
+dropZone.addEventListener("dragleave", () =>
+  dropZone.classList.remove("drag-over"),
+);
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => {
+  e.preventDefault();
+  if (
+    !document.getElementById("dropScreen").classList.contains("hidden") &&
+    e.dataTransfer.files[0]
+  )
+    readFile(e.dataTransfer.files[0]);
+});
+
+function showErr(msg) {
+  dropError.textContent = msg;
+  dropError.classList.add("visible");
+}
+
+function readFile(file) {
+  dropError.classList.remove("visible");
+  if (!/\.(csv|txt)$/i.test(file.name)) {
+    showErr(
+      "Obsługiwany format: .csv — pobierz plik z SharePointa i przeciągnij tutaj.",
+    );
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      appData = parseCSV(e.target.result);
+      dataCreatedAt = null;
+      initDashboard();
+    } catch (err) {
+      showErr("Błąd: " + err.message);
+    }
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+function resetToDrop() {
+  document.getElementById("dropScreen").classList.remove("hidden");
+  document.getElementById("dashboard").classList.remove("visible");
+  apiLoading.classList.add("hidden");
+  dropZone.classList.remove("hidden");
+  fileInput.value = "";
+  dropError.classList.remove("visible");
+  if (mainChart) {
+    mainChart.destroy();
+    mainChart = null;
+  }
+  if (dayChart) {
+    dayChart.destroy();
+    dayChart = null;
+  }
+  appData = null;
+  selectedDay = null;
+}
+
+// ── Pomocnicze gettery danych (total vs. zmiana) ──
+function getMonthValues(seg) {
+  if (activeShift === null) return appData.monthValues[seg];
+  return appData.shiftMonthValues[activeShift]?.[seg] ?? {};
+}
+function getDailyValues(seg, dt) {
+  if (activeShift === null) return appData.dailyValues[seg][dt] || {};
+  return appData.shiftDailyValues[activeShift]?.[seg]?.[dt] || {};
+}
+function getDailyProd(seg, dt) {
+  if (activeShift === null)
+    return seg === "TME" ? appData.dailyTmeProd[dt] : appData.dailySolProd[dt];
+  const map =
+    seg === "TME" ? appData.shiftDailyTmeProd : appData.shiftDailySolProd;
+  return map[activeShift]?.[dt] ?? null;
+}
+function getProdMonth(seg) {
+  if (activeShift === null)
+    return seg === "TME" ? appData.tmeProdMonth : appData.solProdMonth;
+  return seg === "TME"
+    ? (appData.shiftTmeProdMonth[activeShift] ?? null)
+    : (appData.shiftSolProdMonth[activeShift] ?? null);
+}
+function getYMax(key) {
+  if (activeShift === null) return appData.yMax[key];
+  return appData.shiftYMax[activeShift]?.[key] ?? 110;
+}
+function getYMaxDayProc(seg, dt) {
+  const key = seg === "TME" ? "tmeDayProc" : "solDayProc";
+  if (activeShift === null) return appData.yMax[key][dt] || 110;
+  return appData.shiftYMax[activeShift]?.[key]?.[dt] ?? 110;
+}
+
+// ── Init dashboard ──
+function initDashboard() {
+  document.getElementById("dropScreen").classList.add("hidden");
+  document.getElementById("dashboard").classList.add("visible");
+  selectedDay = null;
+  activeSegment = "TME";
+  activeShift = null;
+  document.getElementById("btnTME").classList.add("active");
+  document.getElementById("btnSOL").classList.remove("active");
+  document.getElementById("btnShift0").classList.add("active");
+  document.getElementById("btnShift1").classList.remove("active");
+  document.getElementById("btnShift2").classList.remove("active");
+  document.getElementById("btnShift3").classList.remove("active");
+
+  document.getElementById("monthLabel").textContent = appData.monthLabel;
+  document.getElementById("headerMeta").textContent = dataCreatedAt
+    ? `Centrum Dystrybucyjne · ${appData.monthLabel} · Dane z ${fmtDateTime(dataCreatedAt)}`
+    : `Centrum Dystrybucyjne · ${appData.monthLabel}`;
+
+  const dayLabels = appData.activeDays.map((dt) => dt.slice(8));
+  const seg = activeSegment;
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
+  const th = chartTheme();
+
+  // MAIN CHART
+  const mc = document.getElementById("mainChart").getContext("2d");
+  if (mainChart) mainChart.destroy();
+  mainChart = new Chart(mc, {
+    type: "bar",
+    data: {
+      labels: cols.map((c) => PROC_LABEL[c]),
+      datasets: [
+        {
+          label: "Produktywność (%)",
+          data: mVals,
+          backgroundColor: mVals.map((v) => bgColor(v, 0.75)),
+          borderColor: mVals.map((v) => bdColor(v)),
+          borderWidth: 1.5,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: "Cel",
+          data: new Array(cols.length).fill(TARGET),
+          type: "line",
+          borderColor: th.target,
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+          order: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 350, easing: "easeInOutQuart" },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: th.tooltipBg,
+          borderColor: th.tooltipBorder,
+          borderWidth: 1,
+          titleColor: th.tooltipTitle,
+          bodyColor: th.tooltipBody,
+          padding: 10,
+          callbacks: {
+            label: (ctx) => {
+              if (ctx.datasetIndex === 1) return null;
+              const v = ctx.parsed.y;
+              return v != null
+                ? ` ${v >= TARGET ? "✓" : "✗"} ${v.toFixed(1)}%`
+                : " Brak danych";
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: th.grid },
+          ticks: {
+            color: th.tick1,
+            font: { size: 11, family: "'DM Mono'" },
+            autoSkip: false,
+          },
+          border: { color: th.axisBorder },
+        },
+        y: {
+          min: 0,
+          max: yMaxMain,
+          grid: { color: th.grid },
+          ticks: {
+            color: th.tick1,
+            font: { size: 11 },
+            callback: (v) => v + "%",
+          },
+          border: { color: th.axisBorder },
+        },
+      },
+    },
+  });
+
+  // DAY CHART
+  const dc = document.getElementById("dayChart").getContext("2d");
+  if (dayChart) dayChart.destroy();
+  dayChart = new Chart(dc, {
+    type: "bar",
+    data: {
+      labels: dayLabels,
+      datasets: [
+        {
+          label: `${seg}_PROD (%)`,
+          data: dayProd,
+          backgroundColor: dayProd.map((v) => bgColor(v, 0.7)),
+          borderColor: dayProd.map((v) => bdColor(v)),
+          borderWidth: 1,
+          borderRadius: 3,
+          borderSkipped: false,
+        },
+        {
+          label: "Cel",
+          data: new Array(dayLabels.length).fill(TARGET),
+          type: "line",
+          borderColor: th.target,
+          borderDash: [4, 3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+          order: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 250 },
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        const date = appData.activeDays[els[0].index];
+        if (selectedDay === date) clearFilter();
+        else selectDay(date);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: th.tooltipBg,
+          borderColor: th.tooltipBorder,
+          borderWidth: 1,
+          titleColor: th.tooltipTitle,
+          bodyColor: th.tooltipBody,
+          padding: 10,
+          callbacks: {
+            title: (ctx) => fmtDate(appData.activeDays[ctx[0].dataIndex]),
+            label: (ctx) => {
+              if (ctx.datasetIndex === 1) return null;
+              const v = ctx.parsed.y;
+              return v != null
+                ? ` ${activeSegment}_PROD: ${v.toFixed(1)}%`
+                : " Brak danych";
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: th.tick2,
+            font: { size: 10, family: "'DM Mono'" },
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 16,
+          },
+          border: { color: th.axisBorder2 },
+        },
+        y: {
+          min: 0,
+          max: yMaxDay,
+          grid: { color: th.grid },
+          ticks: {
+            color: th.tick2,
+            font: { size: 10 },
+            callback: (v) => v + "%",
+          },
+          border: { color: th.axisBorder2 },
+        },
+      },
+    },
+  });
+
+  updateLabels();
+  updateMetrics(null);
+  renderTable(null);
+  setChartHeights();
+}
+
+// ── Przełącznik segmentu TME / SOL ──
+function setSegment(seg) {
+  if (seg === activeSegment) return;
+  activeSegment = seg;
+  selectedDay = null;
+
+  document.getElementById("btnTME").classList.toggle("active", seg === "TME");
+  document.getElementById("btnSOL").classList.toggle("active", seg === "SOL");
+  document.getElementById("filterTag").classList.remove("visible");
+  document.getElementById("nodataTag").classList.remove("visible");
+
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
+
+  mainChart.data.labels = cols.map((c) => PROC_LABEL[c]);
+  mainChart.data.datasets[0].data = mVals;
+  mainChart.data.datasets[0].backgroundColor = mVals.map((v) =>
+    bgColor(v, 0.75),
+  );
+  mainChart.data.datasets[0].borderColor = mVals.map((v) => bdColor(v));
+  mainChart.data.datasets[1].data = new Array(cols.length).fill(TARGET);
+  mainChart.options.scales.y.max = yMaxMain;
+  mainChart.update();
+
+  dayChart.data.datasets[0].data = dayProd;
+  dayChart.data.datasets[0].backgroundColor = dayProd.map((v) =>
+    bgColor(v, 0.7),
+  );
+  dayChart.data.datasets[0].borderColor = dayProd.map((v) => bdColor(v));
+  dayChart.options.scales.y.max = yMaxDay;
+  dayChart.update();
+
+  updateLabels();
+  updateMetrics(null);
+  renderTable(null);
+}
+
+// ── Przełącznik zmiany ──
+function setShift(n) {
+  if (n === activeShift) return;
+  activeShift = n;
+  selectedDay = null;
+
+  document.getElementById("btnShift0").classList.toggle("active", n === null);
+  document.getElementById("btnShift1").classList.toggle("active", n === 1);
+  document.getElementById("btnShift2").classList.toggle("active", n === 2);
+  document.getElementById("btnShift3").classList.toggle("active", n === 3);
+  document.getElementById("filterTag").classList.remove("visible");
+  document.getElementById("nodataTag").classList.remove("visible");
+
+  const seg = activeSegment;
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
+
+  mainChart.data.datasets[0].data = mVals;
+  mainChart.data.datasets[0].backgroundColor = mVals.map((v) =>
+    bgColor(v, 0.75),
+  );
+  mainChart.data.datasets[0].borderColor = mVals.map((v) => bdColor(v));
+  mainChart.options.scales.y.max = yMaxMain;
+  mainChart.update();
+
+  dayChart.data.datasets[0].data = dayProd;
+  dayChart.data.datasets[0].backgroundColor = dayProd.map((v) =>
+    bgColor(v, 0.7),
+  );
+  dayChart.data.datasets[0].borderColor = dayProd.map((v) => bdColor(v));
+  dayChart.options.scales.y.max = yMaxDay;
+  dayChart.update();
+
+  updateLabels();
+  updateMetrics(null);
+  renderTable(null);
+}
+
+// ── Aktualizacja etykiet tekstowych ──
+function updateLabels() {
+  const seg = activeSegment;
+  const shiftTag = activeShift !== null ? ` · Zmiana ${activeShift}` : "";
+  const titleSuffix = selectedDay
+    ? `— ${fmtDate(selectedDay)}`
+    : "— cały miesiąc";
+  document.getElementById("mainChartTitle").textContent =
+    `Produktywność per proces ${titleSuffix}`;
+  document.getElementById("chartSubtitle").textContent =
+    `Wartości [%] · Cel: 85% · procesy ${seg}${shiftTag}`;
+  document.getElementById("dayChartLabel").textContent =
+    activeShift !== null
+      ? `Dzienna produktywność — Zmiana ${activeShift} (${seg}_PROD)`
+      : `Dzienna produktywność magazynu (${seg}_PROD)`;
+  document.getElementById("prodMetricLabel").textContent =
+    activeShift !== null
+      ? `Produktywność ${seg} · Zmiana ${activeShift}`
+      : `Produktywność ${seg}`;
+}
+
+// ── Filtrowanie dnia ──
+function selectDay(date) {
+  selectedDay = date;
+  const seg = activeSegment;
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  const vals = cols.map((c) => getDailyValues(seg, date)[c] ?? null);
+  const hasAny = vals.some((v) => v !== null);
+  const yMaxProc = getYMaxDayProc(seg, date);
+
+  mainChart.data.datasets[0].data = vals;
+  mainChart.data.datasets[0].backgroundColor = vals.map((v) =>
+    bgColor(v, 0.75),
+  );
+  mainChart.data.datasets[0].borderColor = vals.map((v) => bdColor(v));
+  mainChart.options.scales.y.max = yMaxProc;
+  mainChart.update();
+
+  const selIdx = appData.activeDays.indexOf(date);
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const selColor = `rgb(${chartTheme().ok})`;
+  dayChart.data.datasets[0].backgroundColor = appData.activeDays.map((dt, i) =>
+    i === selIdx ? selColor : bgColor(dayProd[i], 0.18),
+  );
+  dayChart.data.datasets[0].borderColor = appData.activeDays.map((dt, i) =>
+    i === selIdx ? selColor : bgColor(dayProd[i], 0.4),
+  );
+  dayChart.update();
+
+  document.getElementById("filterTag").classList.add("visible");
+  document.getElementById("filterLabel").textContent = fmtDate(date);
+  document.getElementById("nodataTag").classList.toggle("visible", !hasAny);
+  updateLabels();
+  updateMetrics(date);
+  renderTable(date);
+}
+
+function clearFilter() {
+  selectedDay = null;
+  const seg = activeSegment;
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  const mVals = cols.map((c) => getMonthValues(seg)[c]);
+  const yMaxMain = getYMax(seg === "TME" ? "tmeMonth" : "solMonth");
+  const dayProd = appData.activeDays.map((dt) => getDailyProd(seg, dt));
+  const yMaxDay = getYMax(seg === "TME" ? "tmeDaily" : "solDaily");
+
+  mainChart.data.datasets[0].data = mVals;
+  mainChart.data.datasets[0].backgroundColor = mVals.map((v) =>
+    bgColor(v, 0.75),
+  );
+  mainChart.data.datasets[0].borderColor = mVals.map((v) => bdColor(v));
+  mainChart.options.scales.y.max = yMaxMain;
+  mainChart.update();
+
+  dayChart.data.datasets[0].backgroundColor = dayProd.map((v) =>
+    bgColor(v, 0.7),
+  );
+  dayChart.data.datasets[0].borderColor = dayProd.map((v) => bdColor(v));
+  dayChart.options.scales.y.max = yMaxDay;
+  dayChart.update();
+
+  document.getElementById("filterTag").classList.remove("visible");
+  document.getElementById("nodataTag").classList.remove("visible");
+  updateLabels();
+  updateMetrics(null);
+  renderTable(null);
+}
+
+// ── Metryki ──
+function updateMetrics(day) {
+  const seg = activeSegment;
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  let vals;
+  if (day === null) vals = cols.map((c) => getMonthValues(seg)[c]);
+  else vals = cols.map((c) => getDailyValues(seg, day)[c] ?? null);
+
+  const active = vals.filter((v) => v !== null);
+  const below = active.filter((v) => v < TARGET).length;
+  const best = active.length ? Math.max(...active) : null;
+  const bestIdx = best !== null ? vals.indexOf(best) : -1;
+
+  const prod = day === null ? getProdMonth(seg) : getDailyProd(seg, day);
+
+  document.getElementById("avgMetric").textContent =
+    prod != null ? prod.toFixed(1) + "%" : "—";
+  document.getElementById("avgMetric").className =
+    "metric-value " +
+    (prod == null ? "neutral" : prod >= TARGET ? "good" : "bad");
+  document.getElementById("avgDelta").textContent = day
+    ? fmtDate(day)
+    : activeShift !== null
+      ? `Zmiana ${activeShift} · ${seg}_PROD`
+      : `${seg}_PROD (miesiąc)`;
+  document.getElementById("belowMetric").textContent = active.length
+    ? below
+    : "—";
+  document.getElementById("bestMetric").textContent =
+    bestIdx >= 0 ? PROC_LABEL[cols[bestIdx]] : "—";
+  document.getElementById("bestVal").textContent =
+    best != null ? best.toFixed(1) + "%" : "—";
+
+  if (day === null) {
+    const dwd = appData.activeDays.filter(
+      (dt) => getDailyProd(seg, dt) !== null,
+    ).length;
+    document.getElementById("daysMetric").textContent = dwd;
+    document.getElementById("daysSub").textContent =
+      `z ${appData.activeDays.length} dni`;
+  } else {
+    document.getElementById("daysMetric").textContent = active.length;
+    document.getElementById("daysSub").textContent = "aktywnych procesów";
+  }
+}
+
+// ── Tabela ──
+function renderTable(day) {
+  const seg = activeSegment;
+  const cols = seg === "TME" ? TME_COLS : SOL_COLS;
+  const tbody = document.getElementById("reasonBody");
+  let rows = [];
+
+  if (day === null) {
+    // Wszystkie dni
+    appData.activeDays.forEach((dt) => {
+      const dv = getDailyValues(seg, dt);
+      cols.forEach((col) => {
+        const v = dv[col];
+        if (v !== null && v !== undefined && v < TARGET)
+          rows.push({
+            date: fmtDate(dt),
+            rawDate: dt,
+            wc: PROC_LABEL[col],
+            val: v,
+          });
+      });
+    });
+  } else {
+    // Konkretny dzień
+    const dv = getDailyValues(seg, day);
+    cols.forEach((col) => {
+      const v = dv[col];
+      if (v !== null && v !== undefined && v < TARGET)
+        rows.push({
+          date: fmtDate(day),
+          rawDate: day,
+          wc: PROC_LABEL[col],
+          val: v,
+        });
+    });
+  }
+
+  document.getElementById("belowBadge").textContent =
+    rows.length + " poniżej celu";
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">✓</div>Brak procesów poniżej normy</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows
+    .map((r) => {
+      const data = getReasonForRow(r.rawDate, r.wc, seg);
+      const reasonCell = data?.reason
+        ? `<span class="reason-tag">${data.reason}</span>`
+        : `<span class="pending-tag">brak wpisu</span>`;
+      const shiftCell = data
+        ? `<span class="shift-tag">${data.shift}</span>`
+        : `<span class="pending-tag">—</span>`;
+      const commentCell = data?.comment
+        ? `<span class="comment-tag">${data.comment}</span>`
+        : `<span class="pending-tag">—</span>`;
+      const rowClass = data?.reason ? "" : ' class="row-missing-reason"';
+      return `
+    <tr${rowClass}>
+      <td>${r.date}</td>
+      <td><span class="wc-tag">${r.wc}</span> <span class="val-tag">${r.val.toFixed(1)}%</span></td>
+      <td>${shiftCell}</td>
+      <td>${reasonCell}</td>
+      <td>${commentCell}</td>
+    </tr>
+  `;
+    })
+    .join("");
+}
+
+// ── Wysokości wykresów ──
+function setChartHeights() {
+  if (!mainChart || !dayChart) return;
+  const hdrH = (document.querySelector(".header") || { offsetHeight: 53 })
+    .offsetHeight;
+  const totalH = window.innerHeight - hdrH;
+  const mainH = Math.floor(totalH * 0.6);
+  const botH = totalH - mainH;
+  const mhdrH = (
+    document.querySelector(".chart-header") || { offsetHeight: 44 }
+  ).offsetHeight;
+  const mainCanH = Math.max(mainH - mhdrH - 56, 80);
+  const botCanH = Math.max(botH - 56, 60);
+
+  document.querySelector(".main-chart-area").style.height = mainH + "px";
+  document.querySelector(".chart-wrap").style.height = mainCanH + "px";
+  document.querySelector(".bottom-left").style.height = botH + "px";
+  document.querySelector(".bottom-left-chart-wrap").style.height =
+    botCanH + "px";
+
+  mainChart.resize();
+  dayChart.resize();
+}
+
+window.addEventListener("resize", setChartHeights);
+
+fetchReasons();
+fetchReportData();
